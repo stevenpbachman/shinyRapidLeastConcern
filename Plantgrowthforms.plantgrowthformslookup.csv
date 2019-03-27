@@ -1,0 +1,25 @@
+code,description
+T,Tree - size unknown
+TL,Tree - large
+TS,Tree - small
+S,Shrub - size unknown
+SL,Shrub - large
+SS,Shrub - small
+F,Forb or Herb
+A,Annual
+GR,Graminoid
+GE,Geophyte
+V,Vines
+H,Hydrophyte
+P,Parasite
+E,Epiphyte
+L,Lithophyte
+SC,Succulent - form unknown
+SA,Succulent - annual
+SH,Succulent - shrub
+ST,Succulent - tree
+PT,Fern
+C,Cycad
+M,Fungus
+B,Moss
+LC,Lichen
