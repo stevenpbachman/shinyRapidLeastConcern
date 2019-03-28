@@ -40,6 +40,7 @@ library(sf)
 library(stringr)
 library(shiny)
 library(plyr)
+library(rCAT)
 
 #remove.packages(sf, mylib)
 #mylib = .libPaths()
@@ -663,25 +664,77 @@ all_SIS = function(species, powo, name, email, affiliation, habitat, growthform,
 
 }
 
-# 3.14 combine functions to get LC results - use apply on this
+# 3.14 EOO and AOO
+eoo.aoo = function(native) {
+  
+  mypointsll = data.frame(lat = native$DEC_LAT, long = native$DEC_LONG)
+  centreofpoints <- trueCOGll(mypointsll)
+  mypointsxy <- simProjWiz(mypointsll, centreofpoints)
+  
+  #EOO and AOO calculation
+  EOOm2 <- EOOarea(mypointsxy)
+  EOOkm2 <- EOOm2 / 1000000
+  EOOkm2abs = abs(EOOkm2)
+  rec_count = nrow(mypointsxy)
+  cellsizem <- 10000
+  AOOnocells <- AOOsimp (mypointsxy, cellsizem)
+  
+  eoo.aoo.res = data.frame(
+    EOO = round(EOOkm2abs,0),
+    AOO = AOOnocells,
+    RecordCount = rec_count)
+  
+  return(eoo.aoo.res)
+}
+
+# 3.15 combine functions to get LC results - use apply on this
 LC_comb = function(species){
   
-  full_name = (species$full_name)
-  ID = (species$POWO_ID)
-  check.accepted.POWO("Calamus aruensis")
   
+  full_name = species$name
+  ID = species$IPNI_ID
   
-  #sp_key = gbif.key(species)
-  #points = gbif.points(input$key)
-  #sp_key = gbif.key(input$speciesinput)
-  #sp_key = sp_key$GBIF_SuggestedKey
-  #sp_tax = gbif.tax(sp_key)[c(1,7,8,9)]
+  # get the gbif key or bail out if there is no match
+  sp_key = gbif.key(full_name)
+  sp_key = sp_key[1,1]
+  
+  # get the points using the key
+  points = gbif.points(sp_key$usageKey)
+  
+  # get the native range
+  native = check.tdwg(ID)
+  
+  # clip points to native range
+  native_clipped = native.clip(points, TDWGpolys, ID)  
+  
+  # get EOO and AOO
+  EOO_AOO = eoo.aoo(native_clipped)
+  
+  # pull the results together
+  Results = data.frame(
+    POWO_ID = ID,
+    full_name = full_name,
+    #GBIF_SuggestedKey = sp_tax$GBIF_SuggestedKey,
+    #kin = sp_tax$kin,
+    #phy = sp_tax$phy,
+    #ord = sp_tax$ord,
+    #fam = sp_tax$fam,
+    #GBIF_SuggestedGen = sp_tax$GBIF_SuggestedGen,
+    #GBIF_SuggestedSpe = sp_tax$GBIF_SuggestedSpe,
+    #GBIF_Suggestedauth = sp_tax$GBIF_Suggestedauth,
+    #GBIF_SuggestedNameStatus = sp_tax$GBIF_SuggestedNameStatus,
+    #GBIF_AcceptedKey = sp_tax$GBIF_AcceptedKey,
+    #Warning = "",
+    #TDWGCount = tdwg_count,
+    EOO = EOO_AOO$EOO,
+    AOO = EOO_AOO$AOO,
+    RecordCount = EOO_AOO$RecordCount)
+  
   
 }
 
 
 
-  
 
 
 #### 4 - UI
@@ -891,10 +944,11 @@ ui <- fluidPage(
                         
                         br(),
                         
-                        helpText("Click to check names:"),
+                        helpText("Click to calculate statistics:"),
                         
-                        downloadButton('checknames', "Check names"),
+                        actionButton('getStats', "Get statistics"),
                         
+                        br(),
                         br(),
                         
                         helpText("Click to run batch:"),
@@ -906,7 +960,10 @@ ui <- fluidPage(
                         mainPanel(
                           
                           # Output: Data file ----
-                          DT::dataTableOutput("contents")
+                          DT::dataTableOutput("contents"),
+                          br(),
+                          # Output: Data file ----
+                          DT::dataTableOutput("stats")
                         )
                       
              ),
@@ -1199,11 +1256,29 @@ server <- function(input, output, session) {
     df <- read.csv(input$file1$datapath)
     # 3.14
     # check the names against POWO first
-    applytest = lapply(df$name_in,batch.POWO)
+    withProgress(message = 'Getting there...',
+                 value = 2, {
+                   applytest = lapply(df$name_in,batch.POWO)
+                 })
+    
     applytest_df = do.call(rbind, applytest)
     applytest_df
   })
   
+  
+  statsInput <- eventReactive(input$getStats, {
+    
+    species = batchInput()
+    #single = LC_comb(species)
+    withProgress(message = 'Getting there...',
+                 value = 2, {
+                   multi = adply(species, 1, LC_comb)
+                 })
+    multi
+  })
+  
+  
+
   ### 4. Batch outputs
   output$contents <- DT::renderDataTable({
   
@@ -1212,14 +1287,36 @@ server <- function(input, output, session) {
   
   })
   
-  output$downloadbatch = downloadHandler(
+  output$stats <- DT::renderDataTable({
+    
+    df = statsInput()
+    df
+    
+  })
+  
+
+  output$downloadRes = downloadHandler(
     # download the cleaned gbif point file
     
     filename = function(){
       paste("test_", Sys.Date(), ".csv", sep = "" ) # change this to species name
     },
     content = function(file){
-      write.csv(batchInput(), file, row.names = FALSE)
+      # pull out full name and ID
+      species = batchInput()
+      
+      multi = adply(species, 1, LC_comb)
+      
+      #applydf = lapply(df$name_in,batch.POWO)
+      
+      #full_name = (df$name)
+      #ID = (df$IPNI_ID)
+      
+      # get the gbif key or bail out if there is no match
+      #sp_key = gbif.key(full_name)
+      
+      
+      write.csv(multi, file, row.names = FALSE)
       
     }
   )
