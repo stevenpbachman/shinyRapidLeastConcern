@@ -39,6 +39,7 @@ library(wicket)
 library(sf)
 library(stringr)
 library(shiny)
+library(plyr)
 
 #remove.packages(sf, mylib)
 #mylib = .libPaths()
@@ -329,6 +330,99 @@ check.accepted.POWO = function(name_in) {
   
 }
 
+# 3.3b check name against POWO
+# takes binomial and checks against POWO (http://www.plantsoftheworldonline.org)
+batch.POWO = function(name_in) {
+  
+  #name_in = "Olea europaea subsp. cerasiformis"
+  #name_in = "Eugenia cordata"
+  #name_in = "Poa annua"
+  
+  
+  # get binomial from string
+  #binom = word(name_in, start = 1,2)
+  
+  # use name full name to search API  
+  full_url =  paste("http://plantsoftheworldonline.org/api/1/search?q=names:", name_in, sep = "")
+  #full_url =  paste("http://plantsoftheworld.online/api/2/search?q=", name_in, sep = "")
+  
+  # encode
+  full_url = utils::URLencode(full_url)
+  
+  # new api 2
+  #http://plantsoftheworld.online/api/2/taxon/urn:lsid:ipni.org:names:594092-1
+  
+  # get raw json data
+  raw.data <- readLines(full_url, warn = "F", encoding = "UTF-8")
+  
+  # organise
+  rd = jsonlite::fromJSON(raw.data)
+  
+  if (length(rd$results) == 0) {
+    # add new column to results and call it warning
+    
+    accepted = "NA"          
+    author = ""  
+    #kingdom = ""  
+    name = ""  
+    #rank  = "" 
+    #synonymOf = ""
+    #base_url = ""    
+    IPNI_ID = ""
+    #search_name = name_in
+    #fullname = name_in
+    results = data.frame(IPNI_ID, name,author, accepted)
+    
+  } else {
+    
+    # make data frame
+    results = as.data.frame(rd$results)
+    
+    # add original search term
+    #results$search_name = name_in
+    #results$fullname = name_in
+    
+    
+    # PROBLEM HERE - var with no author - replace with blank field?
+    if (!"author" %in% colnames(results)) {
+      results$author = NA
+    }
+    
+    # split url to get url and IPNI_ID
+    results = results %>% tidyr::separate(url, into = c("base_url", "IPNI_ID"), sep = "names:")
+    
+    # only include these fields - you don't want synonym of
+    results = subset(results, select=c(IPNI_ID, name,author, accepted))
+    
+    # take out any results where it matched on something that wasn't species 
+    #results = subset(results, rank == "Species") 
+    
+    # check if 
+    if (nrow(results) < 1) {
+      # add new column to results and call it warning
+      
+      accepted = "NA"          
+      author = ""  
+      #kingdom = ""  
+      name = ""  
+      #rank  = "" 
+      #synonymOf = ""
+      #base_url = ""    
+      IPNI_ID = ""
+      #search_name = name_in 
+      #fullname = name_in
+      results = data.frame(IPNI_ID, name,author, accepted)
+      
+    }
+    # make data frame
+    results = as.data.frame(results)
+    results = results[1,]
+  }
+  
+  return(results)
+  
+}
+
 # 3.4 get the TDWG native range from POWO
 check.tdwg = function(ID){
   
@@ -569,42 +663,26 @@ all_SIS = function(species, powo, name, email, affiliation, habitat, growthform,
 
 }
 
-# #if (input$allf == TRUE){
-#   allfpath = paste0(getwd(), "/forzip/allfields.csv")
-#   allfields = allfields(input$speciesinput, input$powo)
-#   write.csv(allfields, allfpath)
-# }
-# #if (input$assessments == TRUE){
-#   assessmentspath = paste0(getwd(), "/forzip/assessments.csv")
-#   assessmentstable = assessments(input$speciesinput, input$powo)
-#   write.csv(assessmentstable, assessmentspath)
-# }
-# #if (input$occ == TRUE){
-#   occspath = paste0(getwd(), "/forzip/countries.csv")
-#   occstable = countries(input$powo)
-#   write.csv(occstable, occspath)
-# }
-# #if (input$cred == TRUE){
-#   credpath = paste0(getwd(), "/forzip/credits.csv")
-#   credits = credits(input$name, input$email, input$affiliation, input$speciesinput, input$powo)
-#   write.csv(credits, credpath)
-# }
-# #if (input$habitatInput == TRUE){
-#   habitatpath = paste0(getwd(), "/forzip/habitats.csv")
-#   hab = habitats(input$habinput, input$speciesinput, input$powo)
-#   write.csv(hab, habitatpath)
-# }
-# #if (input$plantsp == TRUE){
-#   plantspath = paste0(getwd(), "/forzip/plantspecific.csv")
-#   plantspecific = plantspecific(input$gfinput, input$speciesinput, input$powo)
-#   write.csv(plantspecific, plantspath)
-# }
-# #if (input$taxcsv == TRUE){
-#   taxpath = paste0(getwd(), "/forzip/taxonomy.csv")
-#   #taxtable =  taxinput()
-#   taxtable = taxonomy(input$key, input$speciesinput, input$powo)
-#   write.csv(taxtable, taxpath)
-# }
+# 3.14 combine functions to get LC results - use apply on this
+LC_comb = function(species){
+  
+  full_name = (species$full_name)
+  ID = (species$POWO_ID)
+  check.accepted.POWO("Calamus aruensis")
+  
+  
+  #sp_key = gbif.key(species)
+  #points = gbif.points(input$key)
+  #sp_key = gbif.key(input$speciesinput)
+  #sp_key = sp_key$GBIF_SuggestedKey
+  #sp_tax = gbif.tax(sp_key)[c(1,7,8,9)]
+  
+}
+
+
+
+  
+
 
 #### 4 - UI
 ui <- fluidPage(
@@ -735,7 +813,7 @@ ui <- fluidPage(
                                                  selectInput("gfinput",
                                                              label = ("Select growth form(s)"), 
                                                              choices = plantgflist[,2],
-                                                             selected = 1,
+                                                             selected = plantgflist[1,2],
                                                              selectize = TRUE,
                                                              multiple = TRUE),
                                                  
@@ -744,7 +822,7 @@ ui <- fluidPage(
                                                              label = ("Select habitat(s)"), 
                                                              #choices = list("Tree - size unknown" = 1, "Tree - large" = 2, "Tree - small" = 3),
                                                              choices = habitatlist[,2],
-                                                             selected = 1,
+                                                             selected = habitatlist[126,2],
                                                              selectize = TRUE,
                                                              multiple = TRUE),
                                                  
@@ -804,14 +882,43 @@ ui <- fluidPage(
              ),
              
              tabPanel("4 Batch",
-                      helpText("Coming soon - option to process multiple species from a single file "),
-                      fluidRow(
-                        column(9, DT::dataTableOutput('output$summarytab')),
-                        column(3, verbatimTextOutput('print_tab'))
-                      )
-                      
+                      #helpText("Coming soon - option to process multiple species from a single file "),
+                      sidebarPanel(
+                        fileInput("file1", "Choose CSV File",
+                                multiple = FALSE,
+                                accept = (".csv")
+                                ),
+                        
+                        br(),
+                        
+                        helpText("Click to check names:"),
+                        
+                        downloadButton('checknames', "Check names"),
+                        
+                        br(),
+                        
+                        helpText("Click to run batch:"),
+                        
+                        actionButton('downloadbatch', "Run batch")
+                        
+                        ),
+                        
+                        mainPanel(
+                          
+                          # Output: Data file ----
+                          DT::dataTableOutput("contents")
+                        )
                       
              ),
+                        
+                      
+                      #fluidRow(
+                      #  column(9, DT::dataTableOutput('output$summarytab')),
+                      #  column(3, verbatimTextOutput('print_tab'))
+                      #)
+                      
+                      
+             
              
              tabPanel("Help",
                       helpText("Coming soon - some help notes here ")
@@ -824,6 +931,8 @@ ui <- fluidPage(
 server <- function(input, output, session) {
   
   ############  INPUTS ############
+  
+  ### 1. Search inputs
   
   mapInput <- eventReactive(input$getPoints, {
     withProgress(message = 'Querying GBIF',
@@ -854,73 +963,19 @@ server <- function(input, output, session) {
     
   })
   
-  cleaningmapInput <- eventReactive(input$cleanPoints, {
-    withProgress(message = 'Querying GBIF',
-                 value = 2, {
-                   points = gbif.points(input$key)
-                 })
-    points$COMPILER = paste0(input$name)
-    ##, ", ", substr(input$firstname, 1, 1),".", input$initials, sep = "")
-    points$CITATION = paste0(input$affiliation, sep = "")
-    points = within(points, rm("issues", "datasetKey", "recordNumber", "recordedBy", "LEVEL3_NAM", "LEVEL3_COD",
-                               "VALUE",	"ID",	"LEVEL2_COD",	"LEVEL1_COD",	"establishment",	"featureId",	"tdwgLevel",	"POWO_ID"))
-    points$BINOMIAL = input$speciesinput
-    points
-    
-    if (input$native == TRUE) {
-      #points = subset(points, points$EVENT_YEAR < "1950")
-      powo = input$powo
-      points = native.clip(points, TDWGpolys, powo)
-      points = within(points, rm("issues", "datasetKey", "recordNumber", "recordedBy", "LEVEL3_NAM", "LEVEL3_COD",
-                                 "VALUE",	"ID",	"LEVEL2_COD",	"LEVEL1_COD",	"establishment",	"featureId",	"tdwgLevel",	"POWO_ID"))
-    } else {
-      points$BINOMIAL = input$speciesinput
-      points
-    }
-    
-  })
-  
-  taxinput = eventReactive(input$key, {
-    tax = taxonomy(input$key, input$speciesinput, input$powo)
-    #credits$internal_taxon_id = input$datasetInput[1,1]
-    tax
-  })
-  
-  
-  # goNameInput = eventReactive(input$goName, {
-  #   DT::renderDataTable({
-  #       req(input$speciesinput)
-  #       sp_key = gbif.key(input$speciesinput)
-  #     }
-  #     , 
-  #     options = list(pageLength = 5)#, #formatStyle(
-  #     #columns = 'usageKey',
-  #     #backgroundColor = styleEqual('red','red','red')
-  #     )
-  #   
-  # })
-
-  ############  OUTPUTS ############
-  #output$print_tab = renderPrint({
-  #  s = input$summarytab_rows_selected
-  #  s
-  #})
-  
-  
-  
+  ### 1. Search outputs
   
   #Show results of GBIF search as a table
   output$summarytab <- DT::renderDataTable({
-   req(input$speciesinput)
-   sp_key = gbif.key(input$speciesinput)
-  }
-  ,
+    req(input$speciesinput)
+    sp_key = gbif.key(input$speciesinput)
+  },
   options = list(pageLength = 5)#, #formatStyle(
   #columns = 'usageKey',
   #backgroundColor = styleEqual('red','red','red')
   )
   
-  # Show results of GBIF search as a table
+  # Show results of powo search as a table
   output$powotab <- DT::renderDataTable({
     req(input$speciesinput)
     powosp = check.accepted.POWO(input$speciesinput)
@@ -951,6 +1006,36 @@ server <- function(input, output, session) {
     
   })
   
+  ### 2. clean inputs
+  
+  cleaningmapInput <- eventReactive(input$cleanPoints, {
+    withProgress(message = 'Querying GBIF',
+                 value = 2, {
+                   points = gbif.points(input$key)
+                 })
+    points$COMPILER = paste0(input$name)
+    ##, ", ", substr(input$firstname, 1, 1),".", input$initials, sep = "")
+    points$CITATION = paste0(input$affiliation, sep = "")
+    points = within(points, rm("issues", "datasetKey", "recordNumber", "recordedBy", "LEVEL3_NAM", "LEVEL3_COD",
+                               "VALUE",	"ID",	"LEVEL2_COD",	"LEVEL1_COD",	"establishment",	"featureId",	"tdwgLevel",	"POWO_ID"))
+    points$BINOMIAL = input$speciesinput
+    points
+    
+    if (input$native == TRUE) {
+      #points = subset(points, points$EVENT_YEAR < "1950")
+      powo = input$powo
+      points = native.clip(points, TDWGpolys, powo)
+      points = within(points, rm("issues", "datasetKey", "recordNumber", "recordedBy", "LEVEL3_NAM", "LEVEL3_COD",
+                                 "VALUE",	"ID",	"LEVEL2_COD",	"LEVEL1_COD",	"establishment",	"featureId",	"tdwgLevel",	"POWO_ID"))
+    } else {
+      points$BINOMIAL = input$speciesinput
+      points
+    }
+    
+  })
+  
+  ### 2. clean outputs
+  
   # output for the map on Cleanpage
   output$mycleanmap <- renderLeaflet({
     df <- mapInput()
@@ -973,7 +1058,7 @@ server <- function(input, output, session) {
     
   })
   
-  # output for the clean map
+  # output for the clean map on clean page
   output$cleaningmap <- renderLeaflet({
     df <- cleaningmapInput()
     sptdwg = tdwg.dist = check.tdwg(input$powo)
@@ -995,6 +1080,18 @@ server <- function(input, output, session) {
     
   })
   
+  
+  ### 3. Download inputs
+  
+  taxinput = eventReactive(input$key, {
+    tax = taxonomy(input$key, input$speciesinput, input$powo)
+    #credits$internal_taxon_id = input$datasetInput[1,1]
+    tax
+  })
+  
+  
+  ### 3. Download outputs
+  
   # Show GBIF occurrence points
   output$pointstab <- DT::renderDataTable({
     req(input$speciesinput)
@@ -1008,14 +1105,13 @@ server <- function(input, output, session) {
     filename = function(){
       paste(input$speciesinput, "_", Sys.Date(), ".csv", sep = "" ) # change this to species name
     },
-    
     content = function(file){
       write.csv(cleaningmapInput(), file, row.names = FALSE)
       
     }
   )
   
-
+  # Show csv files as data tables before download
   output$outallf <- DT::renderDataTable({
     allfields = allfields(input$speciesinput, input$powo)
     #credits$internal_taxon_id = input$datasetInput[1,1]
@@ -1064,7 +1160,6 @@ server <- function(input, output, session) {
     filename = function(){
        paste("SIS_connect.zip") # change this to species name
     },
-    
     content = function(file){
       
       saveSIS = all_SIS(species = input$speciesinput,
@@ -1096,8 +1191,41 @@ server <- function(input, output, session) {
 
     },
     contentType = "application/zip"
+   )
+  
+  ### 4. Batch inputs
+  batchInput <- eventReactive(input$file1, {
     
+    df <- read.csv(input$file1$datapath)
+    # 3.14
+    # check the names against POWO first
+    applytest = lapply(df$name_in,batch.POWO)
+    applytest_df = do.call(rbind, applytest)
+    applytest_df
+  })
+  
+  ### 4. Batch outputs
+  output$contents <- DT::renderDataTable({
+  
+    df = batchInput()
+    df
+  
+  })
+  
+  output$downloadbatch = downloadHandler(
+    # download the cleaned gbif point file
+    
+    filename = function(){
+      paste("test_", Sys.Date(), ".csv", sep = "" ) # change this to species name
+    },
+    content = function(file){
+      write.csv(batchInput(), file, row.names = FALSE)
+      
+    }
   )
+  
+  
+  
   
 }  
 
