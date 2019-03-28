@@ -337,7 +337,7 @@ batch.POWO = function(name_in) {
   
   #name_in = "Olea europaea subsp. cerasiformis"
   #name_in = "Eugenia cordata"
-  #name_in = "Poa annua"
+  #name_in = "Rhamnus intermedia"
   
   
   # get binomial from string
@@ -941,7 +941,10 @@ ui <- fluidPage(
                                 multiple = FALSE,
                                 accept = (".csv")
                                 ),
+                        downloadButton('getcleantab', "Download table"),
                         
+                        br(),
+                        br(),
                         br(),
                         
                         helpText("Click to calculate statistics:"),
@@ -1294,6 +1297,18 @@ server <- function(input, output, session) {
     
   })
   
+  
+  output$getcleantab = downloadHandler(
+    # download the cleaned gbif point file
+    
+    filename = function(){
+      paste("test_", Sys.Date(), ".csv", sep = "" ) # change this to species name
+    },
+    content = function(file){
+      write.csv(batchInput(), file, row.names = FALSE)
+      
+    }
+  )
 
   output$downloadRes = downloadHandler(
     # download the cleaned gbif point file
