@@ -339,7 +339,6 @@ batch.POWO = function(name_in) {
   #name_in = "Eugenia cordata"
   #name_in = "Rhamnus intermedia"
   
-  
   # get binomial from string
   #binom = word(name_in, start = 1,2)
   
@@ -427,6 +426,7 @@ batch.POWO = function(name_in) {
 # 3.4 get the TDWG native range from POWO
 check.tdwg = function(ID){
   
+  #full_url = paste0("http://plantsoftheworld.online/api/2/taxon/urn:lsid:ipni.org:names:", ID, "?fields=distribution")
   full_url = paste0("http://plantsoftheworld.online/api/2/taxon/urn:lsid:ipni.org:names:", ID, "?fields=distribution")
   
   # encode
@@ -692,7 +692,6 @@ eoo.aoo = function(native) {
 # 3.15 combine functions to get LC results - use apply on this
 LC_comb = function(species){
   
-  
   full_name = species$name
   ID = species$IPNI_ID
   
@@ -734,9 +733,202 @@ LC_comb = function(species){
   
 }
 
+# 3.16 combine functions to get LC results - use apply on this
+all_batch_points = function(species){
+  
+  #full_name = "Poa annua"
+  #ID = "320035-2"
+  
+  full_name = species$name
+  ID = species$IPNI_ID
+  
+  # get the gbif key or bail out if there is no match
+  sp_key = gbif.key(full_name)
+  sp_key = sp_key[1,1]
+  
+  # get the points using the key
+  points = gbif.points(sp_key$usageKey)
+  
+  # get the native range
+  native = check.tdwg(ID)
+  
+  # clip points to native range
+  res = native.clip(points, TDWGpolys, ID)  
+  
+  res = subset(
+    res,
+    select = c(
+      'POWO_ID',
+      'BasisOfRec',
+      'DEC_LONG',
+      'DEC_LAT',
+      'BINOMIAL',
+      'EVENT_YEAR',
+      'CATALOG_NO',
+      'SPATIALREF',
+      'ORIGIN',
+      'SEASONAL',
+      'YEAR',
+      'DATA_SENS',
+      'SOURCE',
+      'COMPILER',
+      'CITATION')
+  )
+  
+  colnames(res)[which(names(res) == "POWO_ID")] = "internal_taxon_id"
 
+  return(res)
+  
+  }
+  
+# 3.17 batch allfields
+batch_allfields = function(species){
 
+    ID = species$IPNI_ID
 
+    #check = check.accepted.POWO(species)
+    #ID = check$IPNI_ID  
+    allf = data.frame(
+      internal_taxon_id = ID,	
+      CurrentTrendDataDerivation.value = "Suspected",
+      nothreats.nothreats = "TRUE",
+      threatsunknown.value = "FALSE")
+    
+    return(allf)
+}
+
+# 3.18 batch assessments
+batch_assessments = function(species){
+  
+  ID = species$IPNI_ID
+  
+  sysdate = base::Sys.Date()
+  day = base::substr(sysdate, 9, 10)
+  month = base::substr(sysdate, 6, 7)
+  year = base::substr(sysdate, 1, 4)
+  as = data.frame(
+    internal_taxon_id = ID,	
+    RedListRationale.value = "",	
+    mapstatus.status = "Done",	
+    RedListAssessmentDate.value = paste0(day, "/", month, "/", year),	
+    RedListCriteria.critVersion	= "3.1",
+    RedListCriteria.manualCategory	= "LC",
+    PopulationTrend.value	= "Stable",
+    System.value	= "Terrestrial",
+    language.value	= "English",
+    rangedocumentation.narrative	= "",
+    populationdocumentation.narrative	= "",
+    habitatdocumentation.narrative	= "",
+    threatsdocumentation.value	= "",
+    redlistcriteria.ismanual	= "TRUE",
+    biogeographicrealm.realm = "")
+  return(as)
+}
+
+# 3.19
+batch_credits = function(species) {
+  
+  ID = species$IPNI_ID
+  
+  #check = check.accepted.POWO(species)
+  #ID = check$IPNI_ID
+  credits = data.frame(
+    internal_taxon_id = ID,
+    credit_type = "Assessor",
+    firstName = "Your first name",   #stringr::word(name,1),
+    lastName = "Your last name", #stringr::word(name,2),
+    initials = "",
+    Order = "1",
+    email = "Your email", #email,
+    affiliation = "Your email", #affiliation,
+    user_id = "1"
+  )
+  return(credits)
+}
+
+# 3.20
+batch_habitats = function(species) {
+  #hab = data.frame(description = habitatinput)
+  #hab = merge(hab,habitatlist, by = "description")
+  ID = species$IPNI_ID
+  
+  hab = data.frame(
+    internal_taxon_id = 	ID,
+    GeneralHabitats.GeneralHabitatsSubfield.GeneralHabitatsName = "",
+    GeneralHabitats.GeneralHabitatsSubfield.GeneralHabitatsLookup = "",
+    GeneralHabitats.GeneralHabitatsSubfield.suitability = "Suitable",
+    GeneralHabitats.GeneralHabitatsSubfield.majorImportance	= "",
+    GeneralHabitats.GeneralHabitatsSubfield.season = ""
+  )
+  return(hab)
+}
+
+# 3.21
+batch_plantspecific = function(species) {
+  
+  ID = species$IPNI_ID
+  
+  gf = data.frame(
+  internal_taxon_id = ID,
+  PlantGrowthForms.PlantGrowthFormsSubfield.PlantGrowthFormsLookup = "",
+  PlantGrowthForms.PlantGrowthFormsSubfield.PlantGrowthFormsName = ""
+  )
+
+  return(gf)
+}
+
+# 3.22
+batch_taxonomy = function(species){
+  
+  #check = gbif.key(species)
+  #nameinfo = rgbif::name_usage(key)
+  #powo = check.accepted.POWO(species)
+  #powo2 = subset(powo, subset = powo$IPNI_ID == ID)
+  
+  ID = species$IPNI_ID
+  
+  tax = data.frame(
+    internal_taxon_id = ID,	
+    kingdom	= "PLANTAE",
+    phylum = "",
+    classname = "",
+    ordername = "",
+    family =  "",#nameinfo$data$family,
+    genus = "",#nameinfo$data$genus,
+    species = "",#word(nameinfo$data$species,2),  
+    taxonomicAuthority = ""
+    ) #powo2$author)
+  
+  #now merge with iucn taxonomy to get higher tax
+  #colnames(taxonomy_iucn)[which(names(taxonomy_iucn) == "fam")] = "family"
+  #taxmerged = merge(tax, taxonomy_iucn, by = "family")
+  #taxmerged = taxmerged[c(2,6:8,1,3:5)]
+  
+  return(tax)
+}
+
+# 3.23
+batch_countries = function(species){
+  
+  
+  ID = species$IPNI_ID
+  
+  countries = data.frame(
+    
+    internal_taxon_id = ID,
+    CountryOccurrence.CountryOccurrenceSubfield.presence = "Extant",
+    CountryOccurrence.CountryOccurrenceSubfield.origin = "Native",
+    CountryOccurrence.CountryOccurrenceSubfield.seasonaility = "Resident"
+  )
+  
+  #range = check.tdwg(internal_taxon_id) 
+  # merge with IUCN country file
+  #colnames(TDWG_to_IUCN_version3_UTF)[which(names(TDWG_to_IUCN_version3_UTF) == "Level.3.code")] =
+  #  "LEVEL3_COD"
+  #merged_range = merge(range, TDWG_to_IUCN_version3_UTF, by = "LEVEL3_COD")
+  #country_tab = merged_range[c(6,10,9)]
+
+}
 
 #### 4 - UI
 ui <- fluidPage(
@@ -1288,8 +1480,6 @@ server <- function(input, output, session) {
     input$tdwg
   })
   
-  
-  #statsInput <- reactive({
   statsInput <- eventReactive(input$getStats, {
     species = batchInput()
     #single = LC_comb(species)
@@ -1299,18 +1489,11 @@ server <- function(input, output, session) {
                  })
     df = multi
     df
-    #df = subset(df, EOO >= eooValue())
-    #df = subset(df, AOO >= aooValue())
-    #df = subset(df, RecordCount >= recordsValue())
-    #df = subset(df, TDWGCount >= tdwgValue())
-    
   })
   
 
-
   ### 4. Batch outputs
   output$contents <- DT::renderDataTable({
-  
     df = batchInput()
     df
   }, 
@@ -1327,11 +1510,8 @@ server <- function(input, output, session) {
     }
   )
   
-  #output$showstatsInput <- DT::renderDataTable({
-   #output$stats <- DT::renderDataTable({
   output$stats <- DT::renderDataTable({
     dt = statsInput()
-    #dt
     dt = subset(dt, EOO >= eooValue())
     dt = subset(dt, AOO >= aooValue())
     dt = subset(dt, RecordCount >= recordsValue())
@@ -1339,29 +1519,99 @@ server <- function(input, output, session) {
     }, 
     options = list(pageLength = 5))
 
+  ####################
+  ####################
   
-  
-
-  
-
-
   output$downloadbatch = downloadHandler(
-    # download the cleaned gbif point file
+    # download the results
     filename = function(){
-      paste("results_", Sys.Date(), ".csv", sep = "" ) # change this to species name
+      paste("batch_SIS_connect_", Sys.Date(), ".zip", sep = "" ) # change this to species name
     },
     content = function(file){
-      # pull out full name and ID
-      #species = statsInput()
       dt = statsInput()
+      # now you have to add the filters again, otherwise you get the full table
       dt = subset(dt, EOO >= eooValue())
       dt = subset(dt, AOO >= aooValue())
       dt = subset(dt, RecordCount >= recordsValue())
       dt = subset(dt, TDWGCount >= tdwgValue())
       
-      write.csv(dt, file, row.names = FALSE)
-      #write.csv(output$stats(), file, row.names = FALSE)
-    }
+      dtpath = paste0(getwd(), "/batchzip/results.csv")
+      dttable = dt
+      write.csv(dttable, dtpath, row.names = FALSE)
+      
+      # get the points
+      multipoints = adply(dt, 1, all_batch_points) # run through each species
+      multipoints = multipoints[ -c(1:10)] #drop first 11 columns
+      pointspath = paste0(getwd(), "/batchzip/points.csv") # save path
+      write.csv(multipoints, pointspath, row.names = FALSE) # write it - row.names = FALSE! 
+      
+      # now the csv files
+      # allfields
+      batch_allfields = adply(dt, 1, batch_allfields)
+      batch_allfields = batch_allfields[ -c(1:10)]
+      batch_allfieldspath = paste0(getwd(), "/batchzip/allfields.csv")
+      write.csv(batch_allfields, batch_allfieldspath, row.names = FALSE) # write it - row.names = FALSE! 
+      
+      # assessments
+      batch_assessments = adply(dt, 1, batch_assessments)
+      batch_assessments = batch_assessments[ -c(1:10)]
+      batch_assessmentspath = paste0(getwd(), "/batchzip/assessments.csv")
+      write.csv(batch_assessments, batch_assessmentspath, row.names = FALSE) # write it - row.names = FALSE! 
+      
+      # credits
+      batch_credits = adply(dt, 1, batch_credits)
+      batch_credits = batch_credits[ -c(1:10)]
+      batch_creditspath = paste0(getwd(), "/batchzip/credits.csv")
+      write.csv(batch_credits, batch_creditspath, row.names = FALSE) # write it - row.names = FALSE! 
+      
+      # habitats
+      batch_habitats = adply(dt, 1, batch_habitats)
+      batch_habitats = batch_habitats[ -c(1:10)]
+      batch_habitatspath = paste0(getwd(), "/batchzip/habitats.csv")
+      write.csv(batch_habitats, batch_habitatspath, row.names = FALSE) # write it - row.names = FALSE! 
+      
+      # plantspecific
+      batch_plantspecific = adply(dt, 1, batch_plantspecific)
+      batch_plantspecific = batch_plantspecific[ -c(1:10)]
+      batch_plantspecificpath = paste0(getwd(), "/batchzip/plantspecific.csv")
+      write.csv(batch_plantspecific, batch_plantspecificpath, row.names = FALSE) # write it - row.names = FALSE! 
+      
+      # plantspecific
+      batch_taxonomy = adply(dt, 1, batch_taxonomy)
+      batch_taxonomy = batch_taxonomy[ -c(1:10)]
+      batch_taxonomypath = paste0(getwd(), "/batchzip/taxonomy.csv")
+      write.csv(batch_taxonomy, batch_taxonomypath, row.names = FALSE) # write it - row.names = FALSE! 
+      
+      # countries
+      batch_countries = adply(dt, 1, batch_countries)
+      batch_countries = batch_countries[ -c(1:10)]
+      batch_countriespath = paste0(getwd(), "/batchzip/countries.csv")
+      write.csv(batch_countries, batch_countriespath, row.names = FALSE) # write it - row.names = FALSE! 
+    
+      
+      #write.csv(dt, file, row.names = FALSE)
+      batchzipdir = paste0(getwd(), "/batchzip/")
+      
+      thefiles = c("batchzip/allfields.csv",
+                   "batchzip/assessments.csv",
+                   "batchzip/countries.csv",
+                   "batchzip/credits.csv",
+                   "batchzip/habitats.csv",
+                   "batchzip/plantspecific.csv",
+                   "batchzip/taxonomy.csv",
+                   "batchzip/results.csv",
+                   "batchzip/points.csv")
+
+        # get all files in the directory
+      
+      zip::zipr('batchzip.zip', thefiles)
+        
+      # use copy to force the download
+      file.copy("batchzip.zip", file)
+      
+      
+    },
+    contentType = "application/zip"
   )
   
   
