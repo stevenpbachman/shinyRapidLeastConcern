@@ -1289,8 +1289,8 @@ server <- function(input, output, session) {
   })
   
   
-  statsInput <- reactive({
-  #statsInput <- eventReactive(input$getStats, {
+  #statsInput <- reactive({
+  statsInput <- eventReactive(input$getStats, {
     species = batchInput()
     #single = LC_comb(species)
     withProgress(message = 'Getting there...',
@@ -1298,10 +1298,11 @@ server <- function(input, output, session) {
                    multi = adply(species, 1, LC_comb)
                  })
     df = multi
-    df = subset(df, EOO >= eooValue())
-    df = subset(df, AOO >= aooValue())
-    df = subset(df, RecordCount >= recordsValue())
-    df = subset(df, TDWGCount >= tdwgValue())
+    df
+    #df = subset(df, EOO >= eooValue())
+    #df = subset(df, AOO >= aooValue())
+    #df = subset(df, RecordCount >= recordsValue())
+    #df = subset(df, TDWGCount >= tdwgValue())
     
   })
   
@@ -1328,15 +1329,17 @@ server <- function(input, output, session) {
   
   #output$showstatsInput <- DT::renderDataTable({
    #output$stats <- DT::renderDataTable({
-  output$stats <- eventReactive(input$getStats, {
-    # render the names table after adjusting for slider values
-    output$test  <- DT::renderDataTable({
-      dt = statsInput()
-     dt
+  output$stats <- DT::renderDataTable({
+    dt = statsInput()
+    #dt
+    dt = subset(dt, EOO >= eooValue())
+    dt = subset(dt, AOO >= aooValue())
+    dt = subset(dt, RecordCount >= recordsValue())
+    dt = subset(dt, TDWGCount >= tdwgValue())
     }, 
     options = list(pageLength = 5))
 
-  })
+  
   
 
   
@@ -1350,9 +1353,14 @@ server <- function(input, output, session) {
     content = function(file){
       # pull out full name and ID
       #species = statsInput()
+      dt = statsInput()
+      dt = subset(dt, EOO >= eooValue())
+      dt = subset(dt, AOO >= aooValue())
+      dt = subset(dt, RecordCount >= recordsValue())
+      dt = subset(dt, TDWGCount >= tdwgValue())
       
-      write.csv(statsInput(), file, row.names = FALSE)
-      
+      write.csv(dt, file, row.names = FALSE)
+      #write.csv(output$stats(), file, row.names = FALSE)
     }
   )
   
