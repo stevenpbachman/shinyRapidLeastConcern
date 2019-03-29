@@ -678,10 +678,12 @@ eoo.aoo = function(native) {
   rec_count = nrow(mypointsxy)
   cellsizem <- 10000
   AOOnocells <- AOOsimp (mypointsxy, cellsizem)
+  AOOkm2 <- AOOnocells * (cellsizem/1000)^2
   
   eoo.aoo.res = data.frame(
     EOO = round(EOOkm2abs,0),
-    AOO = AOOnocells,
+    #AOO = AOOnocells,
+    AOO = AOOkm2,
     RecordCount = rec_count)
   
   return(eoo.aoo.res)
@@ -712,8 +714,6 @@ LC_comb = function(species){
   
   # pull the results together
   Results = data.frame(
-    POWO_ID = ID,
-    full_name = full_name,
     #GBIF_SuggestedKey = sp_tax$GBIF_SuggestedKey,
     #kin = sp_tax$kin,
     #phy = sp_tax$phy,
@@ -725,11 +725,12 @@ LC_comb = function(species){
     #GBIF_SuggestedNameStatus = sp_tax$GBIF_SuggestedNameStatus,
     #GBIF_AcceptedKey = sp_tax$GBIF_AcceptedKey,
     #Warning = "",
-    #TDWGCount = tdwg_count,
     EOO = EOO_AOO$EOO,
     AOO = EOO_AOO$AOO,
-    RecordCount = EOO_AOO$RecordCount)
-  
+    RecordCount = EOO_AOO$RecordCount,
+    TDWGCount = nrow(native),
+    POWO_ID = ID,
+    full_name = full_name)
   
 }
 
@@ -890,26 +891,6 @@ ui <- fluidPage(
                                                  
                                                  helpText("Download SIS Connect csv files:"),
                                                  
-                                                 #checkboxGroupInput("sisoptions", "Download SIS files",
-                                                  #                  choices = list("All fields" = 1,
-                                                   #                 "Assessments" = 2,
-                                                    #                "Countries" = 3,
-                                                     #               "Credits" = 4,
-                                                      #              "Habitats" = 5,
-                                                       #             "Plant specific" = 6,
-                                                        #            "Taxonomy" = 7)
-                                                                    
-                                                # ),
-                                                                    
-                                                 
-                                                 #checkboxInput("allf", "All fields", TRUE),
-                                                 #checkboxInput("assessments", "Assessments", TRUE),
-                                                 #checkboxInput("occ", "Countries", TRUE),
-                                                 #checkboxInput("cred", "Credits", TRUE),
-                                                 #checkboxInput("habitatInput", "Habitats", TRUE),
-                                                 #checkboxInput("plantsp", "Plant specific", TRUE),
-                                                 #checkboxInput("taxcsv", "Taxonomy", TRUE),
-                                                
                                                  downloadButton('downloadSIS', "Download SIS Connect Files")
                                                  
                                                  
@@ -937,26 +918,45 @@ ui <- fluidPage(
              tabPanel("4 Batch",
                       #helpText("Coming soon - option to process multiple species from a single file "),
                       sidebarPanel(
-                        fileInput("file1", "Choose CSV File",
+                        fileInput("file1", "Upload a list of names from a CSV file",
                                 multiple = FALSE,
                                 accept = (".csv")
                                 ),
                         downloadButton('getcleantab', "Download table"),
+                        helpText("Check for any problematic names and if necessary reload a table with a clean list of names"),
                         
                         br(),
-                        br(),
-                        br(),
-                        
-                        helpText("Click to calculate statistics:"),
+
+                        helpText("Click 'Get statistics' for range metrics such as EOO and AOO"),
                         
                         actionButton('getStats', "Get statistics"),
-                        
                         br(),
                         br(),
+                        helpText("Adjust thresholds to determine Least Concern"),
                         
-                        helpText("Click to run batch:"),
+                        # Input: EOO threshold ----
+                        sliderInput("eoo", "Extent of Occurrence (EOO):",
+                                    min = 1, max = 100000,
+                                    value = 30000),
                         
-                        actionButton('downloadbatch', "Run batch")
+                        # Input: AOO threshold ----
+                        sliderInput("aoo", "Area of occupancy (AOO):",
+                                    min = 1, max = 10000,
+                                    value = 100),
+                        
+                        # Input: Number of records threshold ----
+                        sliderInput("records", "Number of records:",
+                                    min = 1, max = 1000,
+                                    value = 75),
+                        
+                        # Input: Number of TDWG regions ----
+                        sliderInput("tdwg", "Number of Level 3 TDWG regions:",
+                                    min = 1, max = 100,
+                                    value = 5),
+                        
+                        helpText("Click to download SIS Connect and point files:"),
+                        
+                        downloadButton('downloadbatch', "Download SIS Connect Files")
                         
                         ),
                         
@@ -1094,6 +1094,8 @@ server <- function(input, output, session) {
     
   })
   
+  #######################################################
+  
   ### 2. clean outputs
   
   # output for the map on Cleanpage
@@ -1149,6 +1151,8 @@ server <- function(input, output, session) {
     tax
   })
   
+  
+  #######################################################
   
   ### 3. Download outputs
   
@@ -1253,6 +1257,8 @@ server <- function(input, output, session) {
     contentType = "application/zip"
    )
   
+  #######################################################
+  
   ### 4. Batch inputs
   batchInput <- eventReactive(input$file1, {
     
@@ -1268,70 +1274,84 @@ server <- function(input, output, session) {
     applytest_df
   })
   
+  # Reactive expression to get values from sliders ----
+  eooValue <- reactive({
+    input$eoo
+  })
+  aooValue <- reactive({
+    input$aoo
+  })
+  recordsValue <- reactive({
+    input$records
+  })
+  tdwgValue <- reactive({
+    input$tdwg
+  })
   
-  statsInput <- eventReactive(input$getStats, {
-    
+  
+  statsInput <- reactive({
+  #statsInput <- eventReactive(input$getStats, {
     species = batchInput()
     #single = LC_comb(species)
     withProgress(message = 'Getting there...',
                  value = 2, {
                    multi = adply(species, 1, LC_comb)
                  })
-    multi
+    df = multi
+    df = subset(df, EOO >= eooValue())
+    df = subset(df, AOO >= aooValue())
+    df = subset(df, RecordCount >= recordsValue())
+    df = subset(df, TDWGCount >= tdwgValue())
+    
   })
   
-  
+
 
   ### 4. Batch outputs
   output$contents <- DT::renderDataTable({
   
     df = batchInput()
     df
-  
-  })
-  
-  output$stats <- DT::renderDataTable({
-    
-    df = statsInput()
-    df
-    
-  })
-  
+  }, 
+  options = list(pageLength = 5))
   
   output$getcleantab = downloadHandler(
-    # download the cleaned gbif point file
-    
+    # download the checked names table
     filename = function(){
-      paste("test_", Sys.Date(), ".csv", sep = "" ) # change this to species name
+      paste("checked_names_", Sys.Date(), ".csv", sep = "" ) # change this to species name
     },
     content = function(file){
       write.csv(batchInput(), file, row.names = FALSE)
       
     }
   )
+  
+  #output$showstatsInput <- DT::renderDataTable({
+   #output$stats <- DT::renderDataTable({
+  output$stats <- eventReactive(input$getStats, {
+    # render the names table after adjusting for slider values
+    output$test  <- DT::renderDataTable({
+      dt = statsInput()
+     dt
+    }, 
+    options = list(pageLength = 5))
 
-  output$downloadRes = downloadHandler(
+  })
+  
+
+  
+
+
+  output$downloadbatch = downloadHandler(
     # download the cleaned gbif point file
-    
     filename = function(){
-      paste("test_", Sys.Date(), ".csv", sep = "" ) # change this to species name
+      paste("results_", Sys.Date(), ".csv", sep = "" ) # change this to species name
     },
     content = function(file){
       # pull out full name and ID
-      species = batchInput()
+      #species = statsInput()
       
-      multi = adply(species, 1, LC_comb)
-      
-      #applydf = lapply(df$name_in,batch.POWO)
-      
-      #full_name = (df$name)
-      #ID = (df$IPNI_ID)
-      
-      # get the gbif key or bail out if there is no match
-      #sp_key = gbif.key(full_name)
-      
-      
-      write.csv(multi, file, row.names = FALSE)
+      write.csv(statsInput(), file, row.names = FALSE)
       
     }
   )
