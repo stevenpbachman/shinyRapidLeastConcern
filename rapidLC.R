@@ -364,14 +364,14 @@ batch.POWO = function(name_in) {
     accepted = "NA"          
     author = ""  
     #kingdom = ""  
-    name = ""  
+    name_in = ""  
     #rank  = "" 
     #synonymOf = ""
     #base_url = ""    
     IPNI_ID = ""
     #search_name = name_in
     #fullname = name_in
-    results = data.frame(IPNI_ID, name,author, accepted)
+    results = data.frame(IPNI_ID, name_in,author, accepted)
     
   } else {
     
@@ -394,6 +394,8 @@ batch.POWO = function(name_in) {
     # only include these fields - you don't want synonym of
     results = subset(results, select=c(IPNI_ID, name,author, accepted))
     
+    colnames(results)[which(names(results) == "name")] = "name_in"
+    
     # take out any results where it matched on something that wasn't species 
     #results = subset(results, rank == "Species") 
     
@@ -404,14 +406,14 @@ batch.POWO = function(name_in) {
       accepted = "NA"          
       author = ""  
       #kingdom = ""  
-      name = ""  
+      name_in = ""  
       #rank  = "" 
       #synonymOf = ""
       #base_url = ""    
       IPNI_ID = ""
       #search_name = name_in 
       #fullname = name_in
-      results = data.frame(IPNI_ID, name,author, accepted)
+      results = data.frame(IPNI_ID, name_in, author, accepted)
       
     }
     # make data frame
@@ -822,6 +824,9 @@ batch_assessments = function(species){
     threatsdocumentation.value	= "",
     redlistcriteria.ismanual	= "TRUE",
     biogeographicrealm.realm = "")
+  
+  #"This species has a very wide distribution, large population, is not currently experiencing any major threats and no significant future threats have been identified. This species is therefore assessed as Least Concern."
+  
   return(as)
 }
 
