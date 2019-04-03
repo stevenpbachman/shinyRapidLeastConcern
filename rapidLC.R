@@ -61,7 +61,9 @@ TDWG_to_IUCN_version3_UTF <- read.delim("TDWG_to_IUCN_version3_UTF-8.txt", encod
 #### 3 - functions
 # 3.1 get the gbif key
 gbif.key = function (full_name) {
-  #full_name = species.list$full_name
+  
+  #full_name = "Calamus aruensis"
+  
   gbif.key = rgbif::name_backbone(
     name = full_name,
     rank = 'species',
@@ -237,6 +239,14 @@ gbif.points = function(key) {
   res$SOURCE = paste0("https://www.gbif.org/dataset/", res$datasetKey, sep = "")
   res$COMPILER = ""
   res$CITATION = ""
+  
+  # reformat to iucn standard
+  res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "FOSSIL_SPECIMEN","FossilSpecimen" )
+  res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "PRESERVED_SPECIMEN","PreservedSpecimen" )
+  res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "LIVING_SPECIMEN", "LivingSpecimen")
+  res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "HUMAN_OBSERVATION", "HumanObservation")
+  res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "MACHINE_OBSERVATION","MachineObservation")
+  res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "UNKNOWN","Unknown")
   
   return(res)
 } 
@@ -520,7 +530,7 @@ assessments = function(species, ID){
   year = base::substr(sysdate, 1, 4)
   as = data.frame(
     internal_taxon_id = ID,	
-    RedListRationale.value = "",	
+    RedListRationale.value = "This species has a very wide distribution, large population, is not currently experiencing any major threats and no significant future threats have been identified. This species is therefore assessed as Least Concern.",	
     mapstatus.status = "Done",	
     RedListAssessmentDate.value = paste0(day, "/", month, "/", year),	
     RedListCriteria.critVersion	= "3.1",
@@ -637,27 +647,27 @@ all_SIS = function(species, powo, name, email, affiliation, habitat, growthform,
   
   allfpath = paste0(getwd(), "/forzip/allfields.csv")
   allfields = allfields(species, powo)
-  write.csv(allfields, allfpath)
+  write.csv(allfields, allfpath, row.names = FALSE)
   
   assessmentspath = paste0(getwd(), "/forzip/assessments.csv")
   assessmentstable = assessments(species, powo)
-  write.csv(assessmentstable, assessmentspath)
+  write.csv(assessmentstable, assessmentspath, row.names = FALSE)
   
   occspath = paste0(getwd(), "/forzip/countries.csv")
   occstable = countries(powo)
-  write.csv(occstable, occspath)
+  write.csv(occstable, occspath, row.names = FALSE)
   
   credpath = paste0(getwd(), "/forzip/credits.csv")
   credits = credits(name, email, affiliation, species, powo)
-  write.csv(credits, credpath)
+  write.csv(credits, credpath, row.names = FALSE)
   
   habitatpath = paste0(getwd(), "/forzip/habitats.csv")
   hab = habitats(habitat, species, powo)
-  write.csv(hab, habitatpath)
+  write.csv(hab, habitatpath, row.names = FALSE)
   
   plantspath = paste0(getwd(), "/forzip/plantspecific.csv")
   plantspecific = plantspecific(growthform, species, powo)
-  write.csv(plantspecific, plantspath)
+  write.csv(plantspecific, plantspath, row.names = FALSE)
   
   #taxpath = paste0(getwd(), "/forzip/taxonomy.csv")
   ##taxtable =  taxinput()
@@ -693,6 +703,9 @@ eoo.aoo = function(native) {
 
 # 3.15 combine functions to get LC results - use apply on this
 LC_comb = function(species){
+  
+  #full_name = "Calamus aruensis"
+  #ID = "664971-1"
   
   full_name = species$name
   ID = species$IPNI_ID
@@ -778,6 +791,14 @@ all_batch_points = function(species){
   )
   
   colnames(res)[which(names(res) == "POWO_ID")] = "internal_taxon_id"
+  
+  # reformat basis of record column
+  res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "FOSSIL_SPECIMEN","FossilSpecimen" )
+  res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "PRESERVED_SPECIMEN","PreservedSpecimen" )
+  res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "LIVING_SPECIMEN", "LivingSpecimen")
+  res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "HUMAN_OBSERVATION", "HumanObservation")
+  res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "MACHINE_OBSERVATION","MachineObservation")
+  res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "UNKNOWN","Unknown")
 
   return(res)
   
@@ -800,8 +821,7 @@ batch_allfields = function(species){
 }
 
 # 3.18 batch assessments
-batch_assessments = function(species){
-  
+batch_assessments = function(species) {
   ID = species$IPNI_ID
   
   sysdate = base::Sys.Date()
@@ -809,10 +829,10 @@ batch_assessments = function(species){
   month = base::substr(sysdate, 6, 7)
   year = base::substr(sysdate, 1, 4)
   as = data.frame(
-    internal_taxon_id = ID,	
-    RedListRationale.value = "",	
-    mapstatus.status = "Done",	
-    RedListAssessmentDate.value = paste0(day, "/", month, "/", year),	
+    internal_taxon_id = ID,
+    RedListRationale.value = "This species has a very wide distribution, large population, is not currently experiencing any major threats and no significant future threats have been identified. This species is therefore assessed as Least Concern.",
+    mapstatus.status = "Done",
+    RedListAssessmentDate.value = paste0(day, "/", month, "/", year),
     RedListCriteria.critVersion	= "3.1",
     RedListCriteria.manualCategory	= "LC",
     PopulationTrend.value	= "Stable",
@@ -823,9 +843,8 @@ batch_assessments = function(species){
     habitatdocumentation.narrative	= "",
     threatsdocumentation.value	= "",
     redlistcriteria.ismanual	= "TRUE",
-    biogeographicrealm.realm = "")
-  
-  #"This species has a very wide distribution, large population, is not currently experiencing any major threats and no significant future threats have been identified. This species is therefore assessed as Least Concern."
+    biogeographicrealm.realm = ""
+  )
   
   return(as)
 }
@@ -845,7 +864,7 @@ batch_credits = function(species) {
     initials = "",
     Order = "1",
     email = "Your email", #email,
-    affiliation = "Your email", #affiliation,
+    affiliation = "Your affiliation", #affiliation,
     user_id = "1"
   )
   return(credits)
@@ -885,8 +904,15 @@ batch_plantspecific = function(species) {
 # 3.22
 batch_taxonomy = function(species){
   
-  #check = gbif.key(species)
-  #nameinfo = rgbif::name_usage(key)
+  full_name = species$name
+  
+  
+  
+  sp_key = gbif.key(full_name)
+  sp_key = sp_key[1,1]
+  
+  nameinfo = rgbif::name_usage(sp_key)
+  
   #powo = check.accepted.POWO(species)
   #powo2 = subset(powo, subset = powo$IPNI_ID == ID)
   
@@ -894,45 +920,46 @@ batch_taxonomy = function(species){
   
   tax = data.frame(
     internal_taxon_id = ID,	
-    kingdom	= "PLANTAE",
-    phylum = "",
-    classname = "",
-    ordername = "",
-    family =  "",#nameinfo$data$family,
-    genus = "",#nameinfo$data$genus,
-    species = "",#word(nameinfo$data$species,2),  
-    taxonomicAuthority = ""
-    ) #powo2$author)
+    #kingdom	= "PLANTAE",
+    #phylum = "",
+    #classname = "",
+    #ordername = "",
+    family =  nameinfo$data$family,
+    genus = nameinfo$data$genus,
+    species = word(nameinfo$data$species,2),  
+    taxonomicAuthority = species$author
+    )
   
   #now merge with iucn taxonomy to get higher tax
   #colnames(taxonomy_iucn)[which(names(taxonomy_iucn) == "fam")] = "family"
-  #taxmerged = merge(tax, taxonomy_iucn, by = "family")
-  #taxmerged = taxmerged[c(2,6:8,1,3:5)]
+  taxmerged = merge(tax, taxonomy_iucn, by = "family")
+  taxmerged = taxmerged[c(2,6:9,1,3:5)]
   
-  return(tax)
+  return(taxmerged)
 }
 
 # 3.23
 batch_countries = function(species){
   
-  
   ID = species$IPNI_ID
   
-  countries = data.frame(
-    
-    internal_taxon_id = ID,
-    CountryOccurrence.CountryOccurrenceSubfield.presence = "Extant",
-    CountryOccurrence.CountryOccurrenceSubfield.origin = "Native",
-    CountryOccurrence.CountryOccurrenceSubfield.seasonaility = "Resident"
-  )
-  
-  #range = check.tdwg(internal_taxon_id) 
+  #internal_taxon_id = ID  
+  range = check.tdwg(ID) 
   # merge with IUCN country file
-  #colnames(TDWG_to_IUCN_version3_UTF)[which(names(TDWG_to_IUCN_version3_UTF) == "Level.3.code")] =
-  #  "LEVEL3_COD"
-  #merged_range = merge(range, TDWG_to_IUCN_version3_UTF, by = "LEVEL3_COD")
-  #country_tab = merged_range[c(6,10,9)]
-
+  colnames(TDWG_to_IUCN_version3_UTF)[which(names(TDWG_to_IUCN_version3_UTF) == "Level.3.code")] = "LEVEL3_COD"
+  merged_range = merge(range, TDWG_to_IUCN_version3_UTF, by = "LEVEL3_COD")
+  country_tab = merged_range
+  country_tab$CountryOccurrence.CountryOccurrenceSubfield.presence = "Extant"
+  country_tab$CountryOccurrence.CountryOccurrenceSubfield.origin = "Native"
+  country_tab$CountryOccurrence.CountryOccurrenceSubfield.seasonaility = "Resident"
+  country_tab$internal_taxon_id = ID
+  country_tab
+  
+  country_tab = country_tab[c(19,10,9,16:18)]
+  
+  #countries = data.frame(internal_taxon_id = ID, country_tab)
+  #countries = countries[c(2,6:9,1,3:5)]
+  
 }
 
 #### 4 - UI
@@ -1131,6 +1158,12 @@ ui <- fluidPage(
                         br(),
                         helpText("Adjust thresholds to determine Least Concern"),
                         
+                        # Input: Threat reminder
+                         
+                        checkboxInput("threatvalue", label = "No observed, estimated, projected, inferred, or suspected declines likely 
+                                       to trigger criteria A, B, C, D or E." , value = TRUE),
+                        
+                        
                         # Input: EOO threshold ----
                         sliderInput("eoo", "Extent of Occurrence (EOO):",
                                     min = 1, max = 100000,
@@ -1163,7 +1196,9 @@ ui <- fluidPage(
                           DT::dataTableOutput("contents"),
                           br(),
                           # Output: Data file ----
-                          DT::dataTableOutput("stats")
+                          DT::dataTableOutput("stats"),
+                          verbatimTextOutput("threatvalue")
+                          
                         )
                       
              ),
@@ -1178,7 +1213,7 @@ ui <- fluidPage(
              
              
              tabPanel("Help",
-                      helpText("Coming soon - some help notes here ")
+                      includeMarkdown("README.md")
              )
   )
 )
@@ -1468,10 +1503,22 @@ server <- function(input, output, session) {
                  })
     
     applytest_df = do.call(rbind, applytest)
+    #applytest_df = cbind(applytest_df,df)
     applytest_df
+    
   })
   
   # Reactive expression to get values from sliders ----
+  # output 
+
+  output$threatvalue<- renderPrint({ 
+    if ((input$threatvalue) == TRUE) {
+      invisible(input$threatvalue)
+    } else {
+      print(paste0("WARNING - please consider possible threats (past, present, future) that could cause declines and trigger criteria A, B, C, D, or E."))
+    }
+    
+    })
   eooValue <- reactive({
     input$eoo
   })
@@ -1523,16 +1570,21 @@ server <- function(input, output, session) {
     dt = subset(dt, TDWGCount >= tdwgValue())
     }, 
     options = list(pageLength = 5))
+  
+
+  #if (nrow(df) == 1)
 
   ####################
   ####################
   
   output$downloadbatch = downloadHandler(
-    # download the results
+    
+     # download the results
     filename = function(){
       paste("batch_SIS_connect_", Sys.Date(), ".zip", sep = "" ) # change this to species name
     },
     content = function(file){
+
       dt = statsInput()
       # now you have to add the filters again, otherwise you get the full table
       dt = subset(dt, EOO >= eooValue())
@@ -1617,9 +1669,11 @@ server <- function(input, output, session) {
       
     },
     contentType = "application/zip"
+    
+
   )
   
-  
+    
   
   
 }  
