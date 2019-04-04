@@ -17,6 +17,8 @@
 # add selective rows from datatable: https://yihui.shinyapps.io/DT-rows/ to pick correct key and IPNI ID
 # https://stackoverflow.com/questions/28274584/get-selected-row-from-datatable-in-shiny-app
 # add other issues for cleaning - get from gbif table - use GBIF website format
+# useful code here: C:\R_local\LATEST\RedLeastApply
+
 
 
 #### 1 - libraries
@@ -62,7 +64,7 @@ TDWG_to_IUCN_version3_UTF <- read.delim("TDWG_to_IUCN_version3_UTF-8.txt", encod
 # 3.1 get the gbif key
 gbif.key = function (full_name) {
   
-  #full_name = "Calamus aruensis"
+  #full_name = "Steve bachman"
   
   gbif.key = rgbif::name_backbone(
     name = full_name,
@@ -75,7 +77,22 @@ gbif.key = function (full_name) {
   # bind together in case there are missing data
   merged = dplyr::bind_rows(gbif.key$alternatives, gbif.key$data)
   
+  if (merged$matchType == "HIGHERRANK" && nrow(merged) == 1){
+
+    options = data.frame(
+        usageKey = as.integer(""),
+        acceptedUsageKey = as.character(""),
+        scientificName = as.character(""),
+        rank = as.character(""),
+        status = as.character(""),
+        confidence = as.integer(""),
+        family = as.character(""),
+        acceptedSpecies = as.character("")
+    )
+    
+  }
   
+  else {
   # change col names
   colnames(merged)[which(names(merged) == "species")] = "acceptedSpecies"
   
@@ -102,6 +119,7 @@ gbif.key = function (full_name) {
   # arrange table in descending order to show best guess at top of table
   options = dplyr::arrange(options, desc(confidence))
   return(options)
+  }
 }
 
 # 3.2 fetch the points using key
@@ -438,6 +456,8 @@ batch.POWO = function(name_in) {
 # 3.4 get the TDWG native range from POWO
 check.tdwg = function(ID){
   
+ #ID = "49818-1"
+
   #full_url = paste0("http://plantsoftheworld.online/api/2/taxon/urn:lsid:ipni.org:names:", ID, "?fields=distribution")
   full_url = paste0("http://plantsoftheworld.online/api/2/taxon/urn:lsid:ipni.org:names:", ID, "?fields=distribution")
   
@@ -453,8 +473,8 @@ check.tdwg = function(ID){
   rd = as.data.frame(rd$distribution$natives)
   
   if (!nrow(rd)) {
-    nat_dis = data.frame(
-      tdwgCode = "NA",
+    rd = data.frame(
+      LEVEL3_COD = "NA",
       featureId = "NA",
       tdwgLevel = "NA",
       establishment = "NA",
@@ -468,9 +488,11 @@ check.tdwg = function(ID){
     rd["POWO_ID"] = ID
     colnames(rd)[which(names(rd) == "name")] = "LEVEL3_NAM"
     colnames(rd)[which(names(rd) == "tdwgCode")] = "LEVEL3_COD"
+    
+    #replace Panamá with Panama
+    rd$LEVEL3_NAM = gsub("Panamá", "Panama", rd$LEVEL3_NAM)
     return(rd)
   }
-  
 }
 
 # 3.5 native range clip
@@ -702,7 +724,109 @@ eoo.aoo = function(native) {
 }
 
 # 3.15 combine functions to get LC results - use apply on this
-LC_comb = function(species){
+LC_comb = function(species) {
+  #full_name = "Hypoestes acuminata"
+  #ID = "49818-1"
+  
+  full_name = species$name
+  ID = species$IPNI_ID
+  
+  # get the gbif key or bail out if there is no match
+  sp_key = gbif.key(full_name)
+  
+  if (sp_key$usageKey[1] == "NA") {
+    Results = data.frame(
+      EOO = NA,
+      AOO = NA,
+      RecordCount = NA,
+      TDWGCount = NA,
+      POWO_ID = ID,
+      full_name = full_name,
+      Warning = "No name match in GBIF"
+      
+    )
+  }
+  
+  else {
+    sp_key = sp_key[1, 1]
+    
+    # get the points using the key
+    points = gbif.points(sp_key$usageKey)
+    
+    # count georeferenced occurrences
+    points_count = nrow(points)
+    
+    # check if there are no gbif points
+    if (nrow(points) == 0) {
+      Results = data.frame(
+        EOO = NA,
+        AOO = NA,
+        RecordCount = NA,
+        TDWGCount = NA,
+        POWO_ID = ID,
+        full_name = full_name,
+        Warning = "No GBIF points"
+        
+      )
+    }
+    
+    else {
+      # get the native range
+      native = check.tdwg(ID)
+      
+      if (native$tdwgLevel[1] == "NA") {
+        Results = data.frame(
+          EOO = NA,
+          AOO = NA,
+          RecordCount = NA,
+          TDWGCount = NA,
+          POWO_ID = ID,
+          full_name = full_name,
+          Warning = "No TDWG distribution data"
+        )
+        
+      }
+      
+      else {
+        # clip points to native range
+        native_clipped = native.clip(points, TDWGpolys, ID)
+        
+        if (nrow(native_clipped) < 1) {
+          Results = data.frame(
+            EOO = NA,
+            AOO = NA,
+            RecordCount = NA,
+            TDWGCount = NA,
+            POWO_ID = ID,
+            full_name = full_name,
+            Warning = "No GBIF points in native range"
+            
+          )
+        }
+        
+        else {
+          # get EOO and AOO
+          EOO_AOO = eoo.aoo(native_clipped)
+          
+          # pull the results together
+          Results = data.frame(
+            EOO = EOO_AOO$EOO,
+            AOO = EOO_AOO$AOO,
+            RecordCount = EOO_AOO$RecordCount,
+            TDWGCount = nrow(native),
+            POWO_ID = ID,
+            full_name = full_name,
+            Warning = ""
+          )
+          return(Results)
+        }
+      }
+    }
+  } 
+}
+
+# 3.16 combine functions to get LC results - use apply on this
+all_batch_points = function(species){
   
   #full_name = "Calamus aruensis"
   #ID = "664971-1"
@@ -721,54 +845,8 @@ LC_comb = function(species){
   native = check.tdwg(ID)
   
   # clip points to native range
-  native_clipped = native.clip(points, TDWGpolys, ID)  
-  
-  # get EOO and AOO
-  EOO_AOO = eoo.aoo(native_clipped)
-  
-  # pull the results together
-  Results = data.frame(
-    #GBIF_SuggestedKey = sp_tax$GBIF_SuggestedKey,
-    #kin = sp_tax$kin,
-    #phy = sp_tax$phy,
-    #ord = sp_tax$ord,
-    #fam = sp_tax$fam,
-    #GBIF_SuggestedGen = sp_tax$GBIF_SuggestedGen,
-    #GBIF_SuggestedSpe = sp_tax$GBIF_SuggestedSpe,
-    #GBIF_Suggestedauth = sp_tax$GBIF_Suggestedauth,
-    #GBIF_SuggestedNameStatus = sp_tax$GBIF_SuggestedNameStatus,
-    #GBIF_AcceptedKey = sp_tax$GBIF_AcceptedKey,
-    #Warning = "",
-    EOO = EOO_AOO$EOO,
-    AOO = EOO_AOO$AOO,
-    RecordCount = EOO_AOO$RecordCount,
-    TDWGCount = nrow(native),
-    POWO_ID = ID,
-    full_name = full_name)
-  
-}
-
-# 3.16 combine functions to get LC results - use apply on this
-all_batch_points = function(species){
-  
-  #full_name = "Poa annua"
-  #ID = "320035-2"
-  
-  full_name = species$name
-  ID = species$IPNI_ID
-  
-  # get the gbif key or bail out if there is no match
-  sp_key = gbif.key(full_name)
-  sp_key = sp_key[1,1]
-  
-  # get the points using the key
-  points = gbif.points(sp_key$usageKey)
-  
-  # get the native range
-  native = check.tdwg(ID)
-  
-  # clip points to native range
   res = native.clip(points, TDWGpolys, ID)  
+  res$BINOMIAL = full_name
   
   res = subset(
     res,
@@ -781,6 +859,7 @@ all_batch_points = function(species){
       'EVENT_YEAR',
       'CATALOG_NO',
       'SPATIALREF',
+      'PRESENCE',
       'ORIGIN',
       'SEASONAL',
       'YEAR',
@@ -808,6 +887,7 @@ all_batch_points = function(species){
 batch_allfields = function(species){
 
     ID = species$IPNI_ID
+    EOOval = species$EOO
 
     #check = check.accepted.POWO(species)
     #ID = check$IPNI_ID  
@@ -815,7 +895,8 @@ batch_allfields = function(species){
       internal_taxon_id = ID,	
       CurrentTrendDataDerivation.value = "Suspected",
       nothreats.nothreats = "TRUE",
-      threatsunknown.value = "FALSE")
+      threatsunknown.value = "FALSE",
+      EOO.range = EOOval)
     
     return(allf)
 }
@@ -961,6 +1042,62 @@ batch_countries = function(species){
   #countries = countries[c(2,6:9,1,3:5)]
   
 }
+
+# 3.24 biorealms
+# to be added
+#LC.biorealms = function(TDWG_realms, result.tdwg) {
+#  #add realms using TDWG_realms table - first change column name to get match with result.tdwg
+#  colnames(TDWG_realms) [which(names(TDWG_realms) == "LEVEL3_COD")] = "tdwgCode"
+#  #merge result.tdwg and TDWG_realms so we have realms linked to POWO ID
+#  realms = merge(TDWG_realms, result.tdwg, by.x = "tdwgCode", by.y = "tdwgCode")
+#  # summarise and collapse to get single column with all unique realms - nice!
+#  biorealm_summary = realms %>% group_by(POWO_ID) %>% summarise(newREALM = paste(unique(REALM), collapse =
+#                                                                                   ","))
+#  make_biorealms = data.frame(POWO_ID = biorealm_summary$POWO_ID,
+#                              biogeographicrealm.realm = (gsub("," , "\\|", biorealm_summary$newREALM)))
+#  return(make_biorealms)
+#  
+#}
+
+# 3.25
+# to be added
+# #LC.references = function(LC.results){
+#   #powoid = trees_7079[["ID"]]
+#   #powoid = powoid[1:10]
+#   powoid = LC.results[["POWO_ID"]]
+#   
+#   type = c("electronic source","electronic source","electronic source" )
+#   author = c("Board of Trustees, RBG Kew","Moat, J.", "Chamberlain, S")
+#   year = c("2018","2017", "2017")
+#   title = c("Plants of the World Online Portal", "rCAT: Conservation Assessment Tools. R package version 0.1.5.","rgbif: Interface to the Global 'Biodiversity' Information Facility API. R package version
+#             0.9.9.")
+#   place_published = c("Richmond, UK", "", "")
+#   url = c("http://powo.science.kew.org/","https://CRAN.R-project.org/package=rCAT", "https://CRAN.R-project.org/package=rgbif")
+#   reference_type = c("Assessment","Assessment", "Assessment")
+#   references = data.frame(type, author, year, title, place_published, url, reference_type)
+#   references$internal_taxon_id = powoid[1] 
+#   
+#   # make loop to create table with refs below and add powoid to each table, then bind together
+#   list = powoid[-1]
+#   
+#   for (l in list){
+#     type = c("electronic source","electronic source","electronic source" )
+#     author = c("Board of Trustees, RBG Kew","Moat, J.", "Chamberlain, S")
+#     year = c("2018","2017", "2017")
+#     title = c("Plants of the World Online Portal", 
+#               "rCAT: Conservation Assessment Tools. R package version 0.1.5.",
+#               "rgbif: Interface to the Global 'Biodiversity' Information Facility API. R package version
+#               0.9.9.")
+#     place_published = c("Richmond, UK", "", "")
+#     url = c("http://powo.science.kew.org/","https://CRAN.R-project.org/package=rCAT", "https://CRAN.R-project.org/package=rgbif")
+#     reference_type = c("Assessment","Assessment", "Assessment")
+#     all.references = data.frame(type, author, year, title, place_published, url, reference_type)
+#     all.references$internal_taxon_id = l 
+#     references = rbind(references,all.references)
+#   }
+#   
+#   return(references)
+# }
 
 #### 4 - UI
 ui <- fluidPage(
@@ -1544,6 +1681,7 @@ server <- function(input, output, session) {
   })
   
 
+  
   ### 4. Batch outputs
   output$contents <- DT::renderDataTable({
     df = batchInput()
@@ -1571,6 +1709,9 @@ server <- function(input, output, session) {
     }, 
     options = list(pageLength = 5))
   
+  #dt = multi
+  #dt = subset(dt, EOO >= 100)
+  
 
   #if (nrow(df) == 1)
 
@@ -1586,15 +1727,20 @@ server <- function(input, output, session) {
     content = function(file){
 
       dt = statsInput()
+      
+      # first get the full results out - this will include errors
+      dtpath = paste0(getwd(), "/batchzip/results.csv")
+      dttable = dt
+      write.csv(dttable, dtpath, row.names = FALSE)
+      
+      drop_cols = "Warning"
+      dt  = dt [ , !(names(dt ) %in% drop_cols)]
+ 
       # now you have to add the filters again, otherwise you get the full table
       dt = subset(dt, EOO >= eooValue())
       dt = subset(dt, AOO >= aooValue())
       dt = subset(dt, RecordCount >= recordsValue())
       dt = subset(dt, TDWGCount >= tdwgValue())
-      
-      dtpath = paste0(getwd(), "/batchzip/results.csv")
-      dttable = dt
-      write.csv(dttable, dtpath, row.names = FALSE)
       
       # get the points
       multipoints = adply(dt, 1, all_batch_points) # run through each species

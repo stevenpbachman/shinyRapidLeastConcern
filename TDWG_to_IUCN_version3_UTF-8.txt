@@ -1,4 +1,4 @@
-"ID"	"Level 3 code"	"TDWG_Name"	"countryoccurrencename"	"countryoccurrencelookup"	"area"	"forest_loss"	"hfoot"	"w_forest_loss"	"w_hfoot"
+﻿"ID"	"Level 3 code"	"TDWG_Name"	"countryoccurrence.countryoccurrencesubfield.countryoccurrencename"	"countryoccurrence.countryoccurrencesubfield.countryoccurrencelookup"	"area"	"forest_loss"	"hfoot"	"w_forest_loss"	"w_hfoot"
 1	"ABT"	"Alberta"	"Alberta"	"ABT-OO"	"663485.79"	"96409"	"3.02244373485292"	"63966001528.11"	"2005348.46914944"
 2	"AFG"	"Afghanistan"	"Afghanistan"	"AF"	"641921.21"	"34"	"7.89719398956599"	"21825321.14"	"5069376.32138693"
 3	"AGE"	"Argentina Northeast"	"Argentina"	"AR"	"1122740.83"	"32338"	"8.14828890976749"	"36307192960.54"	"9148416.65363215"
