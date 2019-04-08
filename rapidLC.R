@@ -1,8 +1,8 @@
 #
 # This is a Shiny web application. You can run the application by clicking # the 'Run App' button above.
 #
-### GBIF 2 Red List Point Map
-### A tool to download occurrence data from GBIF, clean for georef errors, and download in IUCN Red List accepted format
+### Rapid Least Concern
+### A tool to download occurrence data from GBIF, clean for georef errors, filter on native range using POWO and download in IUCN Red List accepted format
 ### Steven Bachman - Royal Botanic Gardens, Kew
 
 ### this code is organised by:
@@ -47,12 +47,9 @@ library(rCAT)
 #remove.packages(sf, mylib)
 #mylib = .libPaths()
 
-#install.packages("tidyverse")
-
-#### 2 - shapefiles/rasters/other files
+#### 2 - shapefiles/rasters/other files---------------
 TDWGpolys = sf::read_sf("level3/level3.shp")
 #TDWGpolys = rgdal::readOGR("level3/level3.shp")
-###
 raster.tdwg = raster::raster("rasters/tdwg3.tiff")
 tdwg_raster <- read.csv("tdwg_raster.csv")
 plantgflist <- read.csv("Plantgrowthforms.plantgrowthformslookup.csv", encoding="UTF-16")
@@ -60,7 +57,7 @@ habitatlist <- read.csv("habitats.csv", encoding="UTF-16")
 taxonomy_iucn <- read.csv("taxonomy_iucn.csv", encoding="UTF-16")
 TDWG_to_IUCN_version3_UTF <- read.delim("TDWG_to_IUCN_version3_UTF-8.txt", encoding="UTF-8", na.strings="")
 
-#### 3 - functions
+#### 3 - functions-------------
 # 3.1 get the gbif key
 gbif.key = function (full_name) {
   
@@ -268,6 +265,9 @@ gbif.points = function(key) {
   
   return(res)
 } 
+
+#points = gbif.points("2723560") # bermudiana
+#points = gbif.points("2712752") # scleria levis
 
 # 3.3 check name against POWO
 # takes binomial and checks against POWO (http://www.plantsoftheworldonline.org)
@@ -509,11 +509,32 @@ native.clip = function(points, TDWGpolys, powo){
   coords = base::unique(coords)
   sp = sp::SpatialPoints(coords)
   
-  #merge with sptdwg
-  #merged_points = merge(joined_points, sptdwg, by = LEVEL3_COD)
+  ## alternative vector solution
+  #proj4string(sp) <- proj4string(TDWGpolys)
+  #extracted = over(sp, TDWGpolys)
+  #extract.out = cbind(extracted, coords)
+  #clean_out = na.omit(extract.out)
+  ## change colnames 
+  #colnames(clean_out)[which(names(clean_out) == "decimalLongitude")] = "DEC_LONG"
+  #colnames(clean_out)[which(names(clean_out) == "decimalLatitude")] = "DEC_LAT"
+  ## select the subset you want 1.2.5.6
+  #tdwg.merge.out = clean_out[c("LEVEL3_NAM","LEVEL3_COD","DEC_LONG", "DEC_LAT")]
+  
+  ##powo = "314824-1"
+  #point.clean.bind = merge(points, tdwg.merge.out, by = c("DEC_LONG", "DEC_LAT"), all = TRUE)
+  #sptdwg = check.tdwg(powo)
+  #native_points = merge(point.clean.bind, sptdwg)
+  #native_points
+  
   
   # extract values from TDWG raster
   extract.out = raster::extract(raster.tdwg, sp, df = TRUE)
+  clean_out = na.omit(extract.out)
+
+    if (nrow(clean_out) == 0) {
+      }
+  
+    else {  
   extract.out = cbind(extract.out, coords)
   colnames(extract.out)[which(names(extract.out) == "tdwg3")] = "VALUE"
   merge = merge(extract.out, tdwg_raster, by = "VALUE", all.x = TRUE)
@@ -529,6 +550,7 @@ native.clip = function(points, TDWGpolys, powo){
   sptdwg = within(sptdwg, rm("geometry"))
   native_points = merge(point.clean.bind, sptdwg)
   native_points
+    }
 }
 
 # 3.6 SIS files allfields.csv
@@ -628,11 +650,6 @@ plantspecific = function(gfinput, species, ID) {
   return(gf)
 }
 
-#key = "2704179"
-#species = "Poa annua"
-#ID = "320035-2"
-#taxtest = taxonomy(key, species, ID)
-
 # 3.12 SIS files taxonomy.csv
 taxonomy = function(key, species, ID){
   
@@ -725,8 +742,9 @@ eoo.aoo = function(native) {
 
 # 3.15 combine functions to get LC results - use apply on this
 LC_comb = function(species) {
-  #full_name = "Hypoestes acuminata"
-  #ID = "49818-1"
+  
+  #full_name = "Carex bermudiana"
+  #ID = "298806-1"
   
   full_name = species$name
   ID = species$IPNI_ID
@@ -1099,7 +1117,7 @@ batch_countries = function(species){
 #   return(references)
 # }
 
-#### 4 - UI
+#### 4 - UI---------------
 ui <- fluidPage(
   
   # set themes
@@ -1113,11 +1131,7 @@ ui <- fluidPage(
                                       textInput("speciesinput",
                                                 "1 Enter species e.g. Aloe zebrina",
                                                 placeholder = "Aloe zebrina"),
-                                      
-                                      #br(),
-                                      
-                                      #actionButton("goName", "Search"),
-                                      
+
                                       br(),
                                       
                                       textInput("key",
@@ -1161,9 +1175,7 @@ ui <- fluidPage(
                                       h6("GBIF search results:"),
                                       # search results from GBIF
                                       DT::dataTableOutput("summarytab"),
-                                      #DT::dataTableOutput("goNameInput"),
-                                      
-                                      
+       
                                       br(),
                                       
                                       h6("Plant of the World Online search results:"),
@@ -1193,11 +1205,7 @@ ui <- fluidPage(
                                       br(),
                                       
                                       checkboxInput("native", "Remove non-native points", FALSE),
-                                      
-                                      #checkboxInput("outliers", "Remove point outliers", FALSE),
-                                      #checkboxInput("native", "Clip points to native range", FALSE),
-                                      #checkboxInput("gbif", "Clip points to native range", FALSE),
-                                      
+
                                       br(),
                                       
                                       actionButton("cleanPoints", "Clean"),
@@ -1277,7 +1285,7 @@ ui <- fluidPage(
              ),
              
              tabPanel("4 Batch",
-                      #helpText("Coming soon - option to process multiple species from a single file "),
+
                       sidebarPanel(
                         fileInput("file1", "Upload a list of names from a CSV file",
                                 multiple = FALSE,
@@ -1340,15 +1348,7 @@ ui <- fluidPage(
                       
              ),
                         
-                      
-                      #fluidRow(
-                      #  column(9, DT::dataTableOutput('output$summarytab')),
-                      #  column(3, verbatimTextOutput('print_tab'))
-                      #)
-                      
-                      
-             
-             
+    
              tabPanel("Help",
                       includeMarkdown("README.md")
              )
@@ -1356,7 +1356,7 @@ ui <- fluidPage(
 )
 
 
-### 5 - Server
+### 5 - Server---------------
 server <- function(input, output, session) {
   
   ############  INPUTS ############
@@ -1709,13 +1709,6 @@ server <- function(input, output, session) {
     }, 
     options = list(pageLength = 5))
   
-  #dt = multi
-  #dt = subset(dt, EOO >= 100)
-  
-
-  #if (nrow(df) == 1)
-
-  ####################
   ####################
   
   output$downloadbatch = downloadHandler(
