@@ -33,7 +33,7 @@ There are two options for generating LC assessments: **single** and **batch**. T
 
 **Tab 1. Search**  
 **1** Enter a binomial (Genus species) into the search box. Two tables of results will appear in the main panel to the right. The upper table shows the results from a search of the binomial against the [Global Biodiversity Information Facility (GBIF)](https://www.gbif.org/species/search) names backbone. The best matches are listed in order of confidence. The scientificName field includes the author and can be used to make sure you find the species you are looking for. 
->>>>>>> 7d933df1c09dcf132569a31fc4120cbbb6f64a75
+
 
 The lower table shows the results after running the name against the [Plants of the World (POWO)](http://plantsoftheworldonline.org/) names backbone.  
 
