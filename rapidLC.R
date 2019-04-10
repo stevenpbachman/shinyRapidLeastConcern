@@ -20,12 +20,9 @@
 # useful code here: C:\R_local\LATEST\RedLeastApply
 
 
-
 #### 1 - libraries
 library(magrittr)
 library(readr)
-#library(ggplot2)
-#library(plotly)
 library(rgdal)
 library(DT)
 library(leaflet)
@@ -119,6 +116,11 @@ gbif.key = function (full_name) {
   }
 }
 
+
+#key = "2864093"
+#gtest = gbif.points(key)
+
+
 # 3.2 fetch the points using key
 gbif.points = function(key) {
   #gbifkey = result.table
@@ -154,70 +156,61 @@ gbif.points = function(key) {
       limit = 1000
     )
     
-    
-    res$data$taxonKey = key
+
     res = res$data
     res = as.data.frame(res)
     
+    if (nrow(res) == 0) {
+      
+    } else {
+    
+    res$taxonKey = key
     
     if (!"recordNumber" %in% colnames(res)) {
       res$recordNumber = NA
       as.character(res$recordNumber)
     }
-    
     if (!"decimalLongitude" %in% colnames(res)) {
       res$decimalLongitude = NA
       as.character(res$decimalLongitude)
     }
-    
     if (!"decimalLatitude" %in% colnames(res)) {
       res$decimalLatitude = NA
       as.character(res$decimalLatitude)
     }
-    
     if (!"year" %in% colnames(res)) {
       res$year = NA
       as.character(res$year)
     }
-    
     if (!"datasetKey" %in% colnames(res)) {
       res$datasetKey = NA
     }
-    
     if (!"basisOfRecord" %in% colnames(res)) {
       res$basisOfRecord = NA
     }
-    
     if (!"catalogNumber" %in% colnames(res)) {
       res$catalogNumber = NA
     }
-    
     if (!"recordedBy" %in% colnames(res)) {
       res$recordedBy = NA
     }
-    
     if (!"issues" %in% colnames(res)) {
       res$issues = NA
     }
-    
     if (!"institutionCode" %in% colnames(res)) {
       res$institutionCode = NA
     }
-    
     if (!"country" %in% colnames(res)) {
       res$country = NA
     }
-    
     if (!"familyKey" %in% colnames(res)) {
       res$familyKey = NA
       as.character(res$familyKey)
     }
-    
     if (!"scientificName" %in% colnames(res)) {
       res$scientificName = NA
     }
-  }
-  
+ 
   res = subset(
     res,
     select = c(
@@ -237,6 +230,8 @@ gbif.points = function(key) {
       #'institutionCode'
     )
   )
+  
+
   
   colnames(res)[which(names(res) == "decimalLatitude")] = "DEC_LAT"
   colnames(res)[which(names(res) == "decimalLongitude")] = "DEC_LONG"
@@ -263,6 +258,8 @@ gbif.points = function(key) {
   res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "MACHINE_OBSERVATION","MachineObservation")
   res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "UNKNOWN","Unknown")
   
+  }
+  }
   return(res)
 } 
 
@@ -456,7 +453,7 @@ batch.POWO = function(name_in) {
 # 3.4 get the TDWG native range from POWO
 check.tdwg = function(ID){
   
- #ID = "49818-1"
+ #ID = "320035-2"
 
   #full_url = paste0("http://plantsoftheworld.online/api/2/taxon/urn:lsid:ipni.org:names:", ID, "?fields=distribution")
   full_url = paste0("http://plantsoftheworld.online/api/2/taxon/urn:lsid:ipni.org:names:", ID, "?fields=distribution")
@@ -532,6 +529,7 @@ native.clip = function(points, TDWGpolys, powo){
   clean_out = na.omit(extract.out)
 
     if (nrow(clean_out) == 0) {
+      native_points = data.frame(blankdf = character())
       }
   
     else {  
@@ -740,11 +738,14 @@ eoo.aoo = function(native) {
   return(eoo.aoo.res)
 }
 
+#species = bermuda_1_10[7,]
+#testLC = LC_comb(species)
+
 # 3.15 combine functions to get LC results - use apply on this
 LC_comb = function(species) {
   
-  #full_name = "Carex bermudiana"
-  #ID = "298806-1"
+  #full_name = "Cassine laneana"
+  #ID = "49199-2"
   
   full_name = species$name
   ID = species$IPNI_ID
@@ -809,7 +810,10 @@ LC_comb = function(species) {
         # clip points to native range
         native_clipped = native.clip(points, TDWGpolys, ID)
         
-        if (nrow(native_clipped) < 1) {
+        str(native_clipped)
+        
+        # nrow(native_clipped
+        if (length(native_clipped) < 1 | nrow(native_clipped) == 0) {
           Results = data.frame(
             EOO = NA,
             AOO = NA,
@@ -1121,7 +1125,7 @@ batch_countries = function(species){
 ui <- fluidPage(
   
   # set themes
-  theme = shinythemes::shinytheme("paper"),
+  theme = shinythemes::shinytheme("simplex"),
   
   # Sidebar with a slider input for number of bins 
   navbarPage("Rapid Least Concern",
@@ -1350,7 +1354,7 @@ ui <- fluidPage(
                         
     
              tabPanel("Help",
-                      includeHTML("README.html")
+                      includeMarkdown("README.md")
              )
   )
 )
@@ -1721,11 +1725,12 @@ server <- function(input, output, session) {
 
       dt = statsInput()
       
-      # first get the full results out - this will include errors
+      # first get the full results out - this will include any error species - with explanation
       dtpath = paste0(getwd(), "/batchzip/results.csv")
       dttable = dt
       write.csv(dttable, dtpath, row.names = FALSE)
       
+      # now take out the species that are errors so we have clean set for next bit
       drop_cols = "Warning"
       dt  = dt [ , !(names(dt ) %in% drop_cols)]
  
@@ -1736,6 +1741,12 @@ server <- function(input, output, session) {
       dt = subset(dt, TDWGCount >= tdwgValue())
       
       # get the points
+      withProgress(message = 'Getting there...',
+                   value = 2, {
+                     multipoints = adply(dt, 1, all_batch_points) # run through each species
+                   })
+      
+      
       multipoints = adply(dt, 1, all_batch_points) # run through each species
       multipoints = multipoints[ -c(1:10)] #drop first 11 columns
       pointspath = paste0(getwd(), "/batchzip/points.csv") # save path
