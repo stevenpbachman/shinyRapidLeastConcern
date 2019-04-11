@@ -738,7 +738,7 @@ eoo.aoo = function(native) {
   return(eoo.aoo.res)
 }
 
-#species = bermuda_1_10[7,]
+#species = checked_names_bermuda_100[88,]
 #testLC = LC_comb(species)
 
 # 3.15 combine functions to get LC results - use apply on this
@@ -1009,8 +1009,6 @@ batch_taxonomy = function(species){
   
   full_name = species$name
   
-  
-  
   sp_key = gbif.key(full_name)
   sp_key = sp_key[1,1]
   
@@ -1036,10 +1034,28 @@ batch_taxonomy = function(species){
   #now merge with iucn taxonomy to get higher tax
   #colnames(taxonomy_iucn)[which(names(taxonomy_iucn) == "fam")] = "family"
   taxmerged = merge(tax, taxonomy_iucn, by = "family")
+  
+  if (nrow(taxmerged) <1 {
+    taxmerged = data.frame(
+      internal_taxon_id = ID,	
+      kingdom	= "PLANTAE",
+      phylum = "UNMATCHED",
+      classname = "UNMATCHED",
+      ordername = "UNMATCHED",
+      family =  nameinfo$data$family,
+      genus = nameinfo$data$genus,
+      species = word(nameinfo$data$species,2),  
+      taxonomicAuthority = species$author)
+  })
+  
+  else {
+  
   taxmerged = taxmerged[c(2,6:9,1,3:5)]
   
   return(taxmerged)
-}
+  }
+
+  }
 
 # 3.23
 batch_countries = function(species){
@@ -1353,8 +1369,8 @@ ui <- fluidPage(
              ),
                         
     
-             tabPanel("Help",
-                      includeMarkdown("README.md")
+             tabPanel("Help"#,
+                      #includeHTML("README.html")
              )
   )
 )

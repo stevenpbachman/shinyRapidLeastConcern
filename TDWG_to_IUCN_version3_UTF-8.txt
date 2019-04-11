@@ -309,7 +309,7 @@
 308	"SUM"	"Sumatera"	"Sumatera"	"SUM-OO"	"470941.93"	"125591"	"10.7486677787609"	"59146067930.63"	"5061998.34865847"
 309	"SUR"	"Surinam"	"Suriname"	"SR"	"145018.15"	"1523"	"0.807673932170766"	"220862642.45"	"117127.37944663"
 310	"SVA"	"Svalbard"	"Svalbard and Jan Mayen"	"SJ"	"63032.48"	"0"	"0.002193809344257"	"0"	"138.281243615692"
-311	"SWC"	"Southwest Caribbean"	"""Warning! -  may refer to Colombian Caribbean Is.; Honduran Caribbean Is. or Nicaraguan Caribbean Is."""	"XX"	"355.66"	"10"	"13.4555697412986"	"3556.6"	"4785.60793419026"
+311	"SWC"	"Southwest Caribbean"	"""Warning! Southwest Caribbean SWC -  may refer to Colombian Caribbean Is.; Honduran Caribbean Is. or Nicaraguan Caribbean Is."""	"XX"	"355.66"	"10"	"13.4555697412986"	"3556.6"	"4785.60793419026"
 312	"SWE"	"Sweden"	"Sweden"	"SE"	"446397.55"	"86798"	"6.40709819968056"	"38746414544.9"	"2860112.93894681"
 313	"SWI"	"Switzerland"	"Switzerland"	"CH"	"41507.46"	"454"	"18.0214030277216"	"18844386.84"	"748022.665317033"
 314	"SWZ"	"Swaziland"	"Swaziland"	"SZ"	"17121.79"	"1339"	"10.3083570677729"	"22926076.81"	"176497.524959423"
