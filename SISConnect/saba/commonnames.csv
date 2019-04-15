@@ -1,0 +1,17 @@
+internal_taxon_id,language,name,primary
+6909,English,Sea Cow,false
+6909,Malay,Babi Laut,false
+6909,Spanish; Castilian,Dugon,false
+6909,French,Dugong,false
+6909,Indonesian,Duyong,false
+6909,Malay,Lembu Laut ,false
+6909,German,Seekuh,false
+6909,English,Dugong,true
+22823,Russian,Bely Medved,false
+22823,Norwegian,Isbjørn,false
+22823,Spanish; Castilian,Oso Polar,false
+22823,French,Ours blanc,false
+22823,French,Ours polaire,false
+22823,English,Polar Bear,true
+37583,English,Gumwood,true
+60344,English,European Eel,true

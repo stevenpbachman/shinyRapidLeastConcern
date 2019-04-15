@@ -1,0 +1,45 @@
+Order,affiliation,credit_type,email,firstName,initials,internal_taxon_id,lastName,nickname,user_id
+2,"",Assessor,samstrup@pbears.org,Steven C.,"",22823,Amstrup,"",76570027
+3,"",Assessor,tatwood@usgs.gov,Todd C.,"",22823,Atwood,"",76570048
+5,"",Assessor,nick.lunn@ec.gc.ca,Nick,"",22823,Lunn,"",76570066
+6,"",Assessor,martyn.obbard@ontario.ca,Martyn E.,"",22823,Obbard,"",76570077
+8,"",Assessor,thiemann@yorku.ca,Gregory W.,"",22823,Thiemann,"",76570124
+1,IUCN SSC Polar Bear Specialist Group,Assessor,oystein.wiig@nhm.uio.no,Øystein,Ø.,22823,Wiig,"",14871130
+1,IUCN SSC Sirenia Specialist Group,Assessor,helene.marsh@jcu.edu.au,Helene,H.,6909,Marsh,"",43790296
+2,"James Cook University, Townsville, Australia",Assessor,susan.sobtzick@jcu.edu.au,Susan,S.,6909,Sobtzick,"",55200352
+2,Zoological Society of London,Assessor,matthew.gollock@zsl.org,Matthew,M.,60344,Gollock,"",3988
+1,Zoological Society of London,Assessor,david.jacoby@zsl.org,David,D.,60344,Jacoby,"",43526142
+1,St Helena Plant assessments,Assessor,sjme500@york.ac.uk,Shayla,S.,37583,Ellick,"",68209963
+2,"St. Helena Nature Conservation Group/ Royal Botanic Gardens, Kew",Assessor,plambdon@googlemail.com,Phil,P.W.,37583,Lambdon,"",5625
+1,Global Mammal Assessment,Reviewer,carlo.rondinini@uniroma1.it,Carlo,C.,22823,Rondinini,"",1111
+2,"IUCN SSC Marine Turtle Specialist Group / Marine Research Foundation, Sabah, Malaysia",Reviewer,npilcher@mrf-asia.org,Nicolas,N.J.,6909,Pilcher,Nick,16594286
+1,Murdoch University Cetacean Research Unit,Reviewer,a.hodgson@murdoch.edu.au,Amanda,"",6909,Hodgson,"",82260829
+3,UNEP/CMS,Reviewer,dkwan@cms.int,Donna,"",6909,Kwan,"",82260833
+6,"Leibniz Institute of Freshwater Ecology and Inland Fisheries, Berlin",Reviewer,freyhof@igb-berlin.de,Jörg,J.,60344,Freyhof,"",19073471
+7,Independent,Reviewer,pandbknights@aol.com,Brian,"",60344,Knights,"",14931026
+9,"",Reviewer,hakan.wickstrom@slu.se,Håkan,"",60344,Wickström,"",50621522
+4,"",Reviewer,ediaz@azti.es,Estibaliz,"",60344,Diaz,"",56145925
+5,"",Reviewer,caroline.durif@imr.no,Caroline,"",60344,Durif,"",56146081
+1,"",Reviewer,laurent.beaulaton@rennes.inra.fr,Laurent,"",60344,Beaulaton,"",56145716
+2,"",Reviewer,claude.belpaire@inbo.be,Claude,"",60344,Belpaire,"",56145762
+3,"",Reviewer,willem.dekker@slu.se,Willem,"",60344,Dekker,"",56145842
+1,"Royal Botanic Gardens, Kew",Reviewer,c.clubbe@kew.org,Colin,C.P.,37583,Clubbe,"",3007
+1,Stony Brook University,Contributor,resit.akcakaya@gmail.com,Resit,H.R.,22823,Akçakaya,"",3255
+2,"",Contributor,eli.holmes@noaa.gov,Elizabeth,E.,22823,Holmes,"",78738983
+3,"",Contributor,joel_reynolds@fws.gov,Joel,"",22823,Reynolds,"",78740092
+4,"",Contributor,hstern@uw.edu,Harry,"",22823,Stern,"",79169362
+5,Ex IUCN SSC Polar Bear SG,Contributor,false.email@scott.schliebe.com,Scott,S.,22823,Schliebe,"",85682780
+6,IUCN SSC Polar Bear SG,Contributor,derocher@ualberta.ca,Andrew,A.E,22823,Derocher,"",85682782
+2,IUCN - FBU,Contributor,laurel.bennett@iucn.org,Laurel,"",60344,Bennett,"",425
+7,IUCN SSC Freshwater Fish Specialist Group,Contributor,mkottelat@dplanet.ch,Maurice,M.,60344,Kottelat,"",3013
+12,Cefas,Contributor,alan.walker@cefas.co.uk,Alan,M,60344,Walker,"",48340583
+3,"",Contributor,john.casselman@queensu.ca,John,"",60344,Casselman,"",48340774
+8,"",Contributor,t.kurwie@btinternet.com,Tagried,"",60344,Kurwie,"",48340996
+5,"",Contributor,mdelucia@tnc.org,Mari-Beth,"",60344,DeLucia,"",48341029
+9,"",Contributor,sasal@univ-perp.fr,Pierre,"",60344,Sasal,"",48341038
+11,"",Contributor,huta@affrc.go.jp,Kazuo,"",60344,Uchida,"",48341849
+4,"",Contributor,vicki.crook@traffic.org,Vicki,"",60344,Crook,"",48341909
+6,"",Contributor,akaifu@mail.ecc.u-tokyo.ac.jp,kenzo,K.,60344,Kaifu,"",48341558
+10,"",Contributor,anders.silfvergrip@gmail.com,Anders,A.,60344,Silfvergrip,"",48341063
+1,"",Contributor,ahnhyojin81@gmail.com,Hyojin,H.,60344,Ahn,"",48341883
+1,"",Contributor,rebecca.cairns-wicks.gen.1336494830350@gen.iucnsis.org,Rebecca,"",37583,Cairns-Wicks,"",22618915
