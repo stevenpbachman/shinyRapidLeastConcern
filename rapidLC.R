@@ -49,17 +49,15 @@ TDWGpolys = sf::read_sf("level3/level3.shp")
 #TDWGpolys = rgdal::readOGR("level3/level3.shp")
 raster.tdwg = raster::raster("rasters/tdwg3.tiff")
 tdwg_raster <- read.csv("tdwg_raster.csv")
-plantgflist <- read.csv("Plantgrowthforms.plantgrowthformslookup.csv", encoding="UTF-16")
-habitatlist <- read.csv("habitats.csv", encoding="UTF-16")
-taxonomy_iucn <- read.csv("taxonomy_iucn.csv", encoding="UTF-16")
+plantgflist <- read.csv("plantgrowthformslookup.csv", encoding="UTF-16")
+habitatlist <- read.csv("habitatslookup.csv", encoding="UTF-16")
+taxonomy_iucn <- read.csv("taxonomy_iucn_lookup.csv", encoding="UTF-16")
 TDWG_to_IUCN_version3_UTF <- read.delim("TDWG_to_IUCN_version3_UTF-8.txt", encoding="UTF-8", na.strings="")
 
 #### 3 - functions-------------
 # 3.1 get the gbif key
 gbif.key = function (full_name) {
-  
-  #full_name = "Steve bachman"
-  
+
   gbif.key = rgbif::name_backbone(
     name = full_name,
     rank = 'species',
@@ -115,11 +113,6 @@ gbif.key = function (full_name) {
   return(options)
   }
 }
-
-
-#key = "2864093"
-#gtest = gbif.points(key)
-
 
 # 3.2 fetch the points using key
 gbif.points = function(key) {
@@ -263,19 +256,10 @@ gbif.points = function(key) {
   return(res)
 } 
 
-#points = gbif.points("2723560") # bermudiana
-#points = gbif.points("2712752") # scleria levis
-
 # 3.3 check name against POWO
 # takes binomial and checks against POWO (http://www.plantsoftheworldonline.org)
 check.accepted.POWO = function(name_in) {
-  
-  #name_in = "Olea europaea subsp. cerasiformis"
-  #name_in = "Eugenia cordata"
-  
-  # get binomial from string
-  #binom = word(name_in, start = 1,2)
-  
+
   # use name full name to search API  
   full_url =  paste("http://plantsoftheworldonline.org/api/1/search?q=names:", name_in, sep = "")
   #full_url =  paste("http://plantsoftheworld.online/api/2/search?q=", name_in, sep = "")
@@ -359,13 +343,6 @@ check.accepted.POWO = function(name_in) {
 # 3.3b check name against POWO
 # takes binomial and checks against POWO (http://www.plantsoftheworldonline.org)
 batch.POWO = function(name_in) {
-  
-  #name_in = "Olea europaea subsp. cerasiformis"
-  #name_in = "Eugenia cordata"
-  #name_in = "Rhamnus intermedia"
-  
-  # get binomial from string
-  #binom = word(name_in, start = 1,2)
   
   # use name full name to search API  
   full_url =  paste("http://plantsoftheworldonline.org/api/1/search?q=names:", name_in, sep = "")
@@ -452,8 +429,6 @@ batch.POWO = function(name_in) {
 
 # 3.4 get the TDWG native range from POWO
 check.tdwg = function(ID){
-  
- #ID = "320035-2"
 
   #full_url = paste0("http://plantsoftheworld.online/api/2/taxon/urn:lsid:ipni.org:names:", ID, "?fields=distribution")
   full_url = paste0("http://plantsoftheworld.online/api/2/taxon/urn:lsid:ipni.org:names:", ID, "?fields=distribution")
@@ -494,9 +469,6 @@ check.tdwg = function(ID){
 
 # 3.5 native range clip
 native.clip = function(points, TDWGpolys, powo){
-  
-  #sptdwg = check.tdwg("530052-1")
-  #sptdwg = merge(TDWGpolys, tdwg.dist)
   
   # prepare the point data as spatial
   decimalLongitude = points$DEC_LONG
@@ -553,8 +525,7 @@ native.clip = function(points, TDWGpolys, powo){
 
 # 3.6 SIS files allfields.csv
 allfields = function(species, ID){
-  #check = check.accepted.POWO(species)
-  #ID = check$IPNI_ID  
+
   allf = data.frame(
     internal_taxon_id = ID,	
     CurrentTrendDataDerivation.value = "Suspected",
@@ -566,6 +537,7 @@ allfields = function(species, ID){
 
 # 3.7 SIS files assessments.csv
 assessments = function(species, ID){
+  
   sysdate = base::Sys.Date()
   day = base::substr(sysdate, 9, 10)
   month = base::substr(sysdate, 6, 7)
@@ -607,8 +579,7 @@ countries = function(ID){
 
 # 3.9 SIS files - credits.csv
 credits = function(name,email,affiliation,species, ID) {
-  #check = check.accepted.POWO(species)
-  #ID = check$IPNI_ID
+
   credits = data.frame(
     internal_taxon_id = ID,
     credit_type = "Assessor",
@@ -625,6 +596,7 @@ credits = function(name,email,affiliation,species, ID) {
 
 # 3.10 SIS files - habitats.csv
 habitats = function(habitatinput, species, ID) {
+  
   hab = data.frame(description = habitatinput)
   hab = merge(hab,habitatlist, by = "description")
   hab$internal_taxon_id = 	ID
@@ -738,15 +710,9 @@ eoo.aoo = function(native) {
   return(eoo.aoo.res)
 }
 
-#species = checked_names_bermuda_100[88,]
-#testLC = LC_comb(species)
-
 # 3.15 combine functions to get LC results - use apply on this
 LC_comb = function(species) {
-  
-  #full_name = "Cassine laneana"
-  #ID = "49199-2"
-  
+
   full_name = species$name
   ID = species$IPNI_ID
   
@@ -849,9 +815,6 @@ LC_comb = function(species) {
 
 # 3.16 combine functions to get LC results - use apply on this
 all_batch_points = function(species){
-  
-  #full_name = "Calamus aruensis"
-  #ID = "664971-1"
   
   full_name = species$name
   ID = species$IPNI_ID
@@ -957,8 +920,6 @@ batch_credits = function(species) {
   
   ID = species$IPNI_ID
   
-  #check = check.accepted.POWO(species)
-  #ID = check$IPNI_ID
   credits = data.frame(
     internal_taxon_id = ID,
     credit_type = "Assessor",
@@ -975,8 +936,7 @@ batch_credits = function(species) {
 
 # 3.20
 batch_habitats = function(species) {
-  #hab = data.frame(description = habitatinput)
-  #hab = merge(hab,habitatlist, by = "description")
+
   ID = species$IPNI_ID
   
   hab = data.frame(
@@ -1035,7 +995,7 @@ batch_taxonomy = function(species){
   #colnames(taxonomy_iucn)[which(names(taxonomy_iucn) == "fam")] = "family"
   taxmerged = merge(tax, taxonomy_iucn, by = "family")
   
-  if (nrow(taxmerged) <1 {
+  if (nrow(taxmerged) <1) {
     taxmerged = data.frame(
       internal_taxon_id = ID,	
       kingdom	= "PLANTAE",
@@ -1046,7 +1006,7 @@ batch_taxonomy = function(species){
       genus = nameinfo$data$genus,
       species = word(nameinfo$data$species,2),  
       taxonomicAuthority = species$author)
-  })
+  }
   
   else {
   
@@ -1137,6 +1097,10 @@ batch_countries = function(species){
 #   return(references)
 # }
 
+?updateNavbarPage
+?navbarPage
+
+
 #### 4 - UI---------------
 ui <- fluidPage(
   
@@ -1144,7 +1108,7 @@ ui <- fluidPage(
   theme = shinythemes::shinytheme("simplex"),
   
   # Sidebar with a slider input for number of bins 
-  navbarPage("Rapid Least Concern",
+  navbarPage("Rapid Least Concern", id = "navLC",
              tabPanel("1 Search",
                       sidebarLayout(position = "left",
                                     sidebarPanel(
@@ -1181,10 +1145,10 @@ ui <- fluidPage(
                                                 placeholder = "my institution"),
                                       
                                       br(),
-                                      actionButton("getPoints", "Draw map"),
-                                      br(),
-                                      br(),
-                                      helpText("Now go to tab '2 CLEAN' to clean the points")
+                                      actionButton("getPoints", "Go to section 2 >>")
+                                      #br(),
+                                      #br(),
+                                      #helpText("Now go to tab '2 CLEAN' to clean the points")
                                       
                                     ),
                                     
@@ -1202,13 +1166,13 @@ ui <- fluidPage(
                                       # search results from POWO
                                       DT::dataTableOutput("powotab"),
                                       
-                                      br(),
+                                      #br(),
                                       
-                                      h6("Distribution map: "),
+                                      #h6("Distribution map: "),
                                       
-                                      leaflet::leafletOutput("mymap", width = "100%", height = 400),
+                                      #leaflet::leafletOutput("mymap", width = "100%", height = 400),
                                       
-                                      br(),
+                                      #br(),
                                       br()
                                       
                                     )
@@ -1231,7 +1195,8 @@ ui <- fluidPage(
                                       actionButton("cleanPoints", "Clean"),
                                       br(),
                                       br(),
-                                      helpText("Now go to tab '3 DOWNLOAD' to save the point file and SIS CSV files")
+                                      actionButton("goto3", "Go to section 3 >>")
+                                      #helpText("Now go to tab '3 DOWNLOAD' to save the point file and SIS CSV files")
                                       
                                     ),
                                     
@@ -1239,7 +1204,7 @@ ui <- fluidPage(
                                     mainPanel(
                                       
                                       h6("Raw Distribution map: "),
-                                      leaflet::leafletOutput("mycleanmap", width = "100%", height = 400),
+                                      leaflet::leafletOutput("mymap", width = "100%", height = 400),
                                       
                                       h6("Clean Distribution map: "),
                                       leaflet::leafletOutput("cleaningmap", width = "100%", height = 400)
@@ -1432,27 +1397,11 @@ server <- function(input, output, session) {
   }, 
   options = list(pageLength = 5))
   
-  # output for the map on Search page
-  output$mymap <- renderLeaflet({
-    df <- mapInput()
-    sptdwg = check.tdwg(input$powo)
-    sptdwg = merge(TDWGpolys, sptdwg)
-    
-    leaflet(data = df) %>%
-      addMapPane("points", zIndex = 420) %>%
-      addMapPane("poly", zIndex = 410) %>%
-      addCircleMarkers(lng = ~DEC_LONG,
-                       lat = ~DEC_LAT, radius = 4, color = "green", popup = paste("Collector:", df$recordedBy, "<br>",
-                                                                                  "Number:", df$recordNumber, "<br>",
-                                                                                  "Year:", df$EVENT_YEAR, "<br>",
-                                                                                  "Catalogue No.:", df$CATALOG_NO),
-                       options = pathOptions(pane = "points")) %>%
-      # maybe add an IF here to control whether native range is mapped
-      addPolygons(data=sptdwg, color = "red", weight = 1, fillColor = "red", fillOpacity = 0.2, options = pathOptions(pane = "poly")) %>%
-      addProviderTiles(providers$OpenStreetMap,
-                       options = providerTileOptions(noWrap = TRUE))
-    
-    
+  # link to navpanel 2 Clena
+  observeEvent(input$goto3, {
+    updateTabsetPanel(session, "navLC",
+                      selected = "3 Download"
+    )
   })
   
   ### 2. clean inputs
@@ -1488,7 +1437,7 @@ server <- function(input, output, session) {
   ### 2. clean outputs
   
   # output for the map on Cleanpage
-  output$mycleanmap <- renderLeaflet({
+  output$mymap <- renderLeaflet({
     df <- mapInput()
     sptdwg = tdwg.dist = check.tdwg(input$powo)
     sptdwg = merge(TDWGpolys, tdwg.dist)
@@ -1530,6 +1479,14 @@ server <- function(input, output, session) {
                        options = providerTileOptions(noWrap = TRUE))
     
   })
+  
+  # link to navpanel 3 Download
+  observeEvent(input$getPoints, {
+    updateTabsetPanel(session, "navLC",
+                      selected = "2 Clean"
+    )
+  })
+  
   
   
   ### 3. Download inputs
