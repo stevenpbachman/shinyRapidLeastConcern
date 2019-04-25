@@ -52,10 +52,17 @@ tdwg_raster <- read.csv("tdwg_raster.csv")
 plantgflist <- read.csv("plantgrowthformslookup.csv", encoding="UTF-16")
 habitatlist <- read.csv("habitatslookup.csv", encoding="UTF-16")
 taxonomy_iucn <- read.csv("taxonomy_iucn_lookup.csv", encoding="UTF-16")
-TDWG_to_IUCN_version3_UTF <- read.delim("TDWG_to_IUCN_version3_UTF-8.txt", encoding="UTF-8", na.strings="")
+#TDWG_to_IUCN_version3_UTF <- read.delim("TDWG_to_IUCN_version3_UTF-8.txt", encoding="UTF-8", na.strings="")
+TDWG_to_IUCN_version3_UTF <- read.delim("taxonomy_iucn_lookup_tab.txt", encoding="UTF-16", na.strings="")
+
+
 
 #### 3 - functions-------------
+#test = gbif.key("Aloe zebrina")
+#testpoints = gbif.points("2777656")
+
 # 3.1 get the gbif key
+
 gbif.key = function (full_name) {
 
   gbif.key = rgbif::name_backbone(
@@ -570,6 +577,10 @@ countries = function(ID){
   colnames(TDWG_to_IUCN_version3_UTF)[which(names(TDWG_to_IUCN_version3_UTF) == "Level.3.code")] =
     "LEVEL3_COD"
   merged_range = merge(range, TDWG_to_IUCN_version3_UTF, by = "LEVEL3_COD")
+  
+  # now get rid of the duplicates to get a clean list
+  merged_range = merged_range[!duplicated(merged_range$countryoccurrence.countryoccurrencesubfield.countryoccurrencename), ]
+  
   country_tab = merged_range[c(6,10,9)]
   country_tab$CountryOccurrence.CountryOccurrenceSubfield.presence = "Extant"
   country_tab$CountryOccurrence.CountryOccurrenceSubfield.origin = "Native"
@@ -1027,6 +1038,10 @@ batch_countries = function(species){
   # merge with IUCN country file
   colnames(TDWG_to_IUCN_version3_UTF)[which(names(TDWG_to_IUCN_version3_UTF) == "Level.3.code")] = "LEVEL3_COD"
   merged_range = merge(range, TDWG_to_IUCN_version3_UTF, by = "LEVEL3_COD")
+  
+  # now get rid of the duplicates to get a clean list
+  #merged_range = merged_range[!duplicated(merged_range$countryoccurrence.countryoccurrencesubfield.countryoccurrencename), ]
+  
   country_tab = merged_range
   country_tab$CountryOccurrence.CountryOccurrenceSubfield.presence = "Extant"
   country_tab$CountryOccurrence.CountryOccurrenceSubfield.origin = "Native"
@@ -1295,7 +1310,7 @@ ui <- fluidPage(
                         
                         
                         # Input: EOO threshold ----
-                        sliderInput("eoo", "Extent of Occurrence (EOO):",
+                        sliderInput("eoo", "Extent of occurrence (EOO):",
                                     min = 1, max = 100000,
                                     value = 30000),
                         
