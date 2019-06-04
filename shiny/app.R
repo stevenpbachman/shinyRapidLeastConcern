@@ -658,34 +658,34 @@ taxonomy = function(key, species, ID){
 # 3.13 save all SIS files
 all_SIS = function(species, powo, name, email, affiliation, habitat, growthform, key){
   
-  do.call(file.remove, list(list.files(paste0(getwd(), "/forzip/"), full.names = TRUE)))
+  do.call(file.remove, list(list.files(paste0(getwd(), "/singlezip/"), full.names = TRUE)))
   
   
-  allfpath = paste0(getwd(), "/forzip/allfields.csv")
+  allfpath = paste0(getwd(), "/singlezip/allfields.csv")
   allfields = allfields(species, powo)
   write.csv(allfields, allfpath, row.names = FALSE)
   
-  assessmentspath = paste0(getwd(), "/forzip/assessments.csv")
+  assessmentspath = paste0(getwd(), "/singlezip/assessments.csv")
   assessmentstable = assessments(species, powo)
   write.csv(assessmentstable, assessmentspath, row.names = FALSE)
   
-  occspath = paste0(getwd(), "/forzip/countries.csv")
+  occspath = paste0(getwd(), "/singlezip/countries.csv")
   occstable = countries(powo)
   write.csv(occstable, occspath, row.names = FALSE)
   
-  credpath = paste0(getwd(), "/forzip/credits.csv")
+  credpath = paste0(getwd(), "/singlezip/credits.csv")
   credits = credits(name, email, affiliation, species, powo)
   write.csv(credits, credpath, row.names = FALSE)
   
-  habitatpath = paste0(getwd(), "/forzip/habitats.csv")
+  habitatpath = paste0(getwd(), "/singlezip/habitats.csv")
   hab = habitats(habitat, species, powo)
   write.csv(hab, habitatpath, row.names = FALSE)
   
-  plantspath = paste0(getwd(), "/forzip/plantspecific.csv")
+  plantspath = paste0(getwd(), "/singlezip/plantspecific.csv")
   plantspecific = plantspecific(growthform, species, powo)
   write.csv(plantspecific, plantspath, row.names = FALSE)
   
-  #taxpath = paste0(getwd(), "/forzip/taxonomy.csv")
+  #taxpath = paste0(getwd(), "/singlezip/taxonomy.csv")
   ##taxtable =  taxinput()
   #taxtable = taxonomy(key, species, powo)
   #write.csv(taxtable, taxpath)
@@ -1594,16 +1594,16 @@ server <- function(input, output, session) {
                         growthform = input$gfinput,
                         key = input$key)
 
-      zipdir = paste0(getwd(), "/forzip/")
+      zipdir = paste0(getwd(), "/singlezip/")
       #thefiles = list.files(zipdir, full.names = TRUE)
       #thefilesnames = paste0(zipdir, thefiles)     
-      thefiles = c("forzip/allfields.csv",
-                   "forzip/assessments.csv",
-                   "forzip/countries.csv",
-                   "forzip/credits.csv",
-                   "forzip/habitats.csv",
-                   "forzip/plantspecific.csv")
-                   #"forzip/taxonomy.csv")
+      thefiles = c("singlezip/allfields.csv",
+                   "singlezip/assessments.csv",
+                   "singlezip/countries.csv",
+                   "singlezip/credits.csv",
+                   "singlezip/habitats.csv",
+                   "singlezip/plantspecific.csv")
+                   #"singlezip/taxonomy.csv")
       
       #files2zip <- dir(zipdir, full.names = TRUE)
       zip::zipr('myzip.zip', thefiles)
