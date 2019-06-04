@@ -8,10 +8,9 @@
 ### this code is organised by:
 
 # 1 - libraries
-# 2 - shapefiles
-# 3 - functions
-# 4 - UI
-# 5 - Server
+# 2 - functions
+# 3 - UI
+# 4 - Server
 
 ### to do later
 # add selective rows from datatable: https://yihui.shinyapps.io/DT-rows/ to pick correct key and IPNI ID
@@ -41,23 +40,12 @@ library(shiny)
 library(plyr)
 library(rCAT)
 
-#remove.packages(sf, mylib)
-#mylib = .libPaths()
 
-#### 2 - shapefiles/rasters/other files---------------
-TDWGpolys = sf::read_sf("data/level3/level3.shp")
-##TDWGpolys = rgdal::readOGR("data/level3/level3.shp")
-raster.tdwg = raster::raster("data/rasters/tdwg3.tiff")
-tdwg_raster <- read.csv("data/tdwg_raster.csv")
-plantgflist <- read.csv("data/plantgrowthformslookup.csv", encoding="UTF-16")
-habitatlist <- read.csv("data/habitatslookup.csv", encoding="UTF-16")
-taxonomy_iucn <- read.csv("data/taxonomy_iucn_lookup.csv", encoding="UTF-16")
-TDWG_to_IUCN_version3_UTF <- read.delim("data/TDWG_to_IUCN.txt", encoding="UTF-16", na.strings="")
-
+#### 2 - Source the functions---------------
 source("Rapid_LC_functions.R")
 
 
-#### 4 - UI---------------
+#### 3 - UI---------------
 ui <- fluidPage(
   
   # set themes
@@ -297,7 +285,7 @@ ui <- fluidPage(
 )
 
 
-### 5 - Server---------------
+### 4 - Server---------------
 server <- function(input, output, session) {
   
   ############  INPUTS ############
