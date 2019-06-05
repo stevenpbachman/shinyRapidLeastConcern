@@ -304,6 +304,7 @@ check.accepted.POWO = function(name_in) {
 
 # 3.3b check name against POWO
 # takes binomial and checks against POWO (http://www.plantsoftheworldonline.org)
+
 batch.POWO = function(name_in) {
   
   # use name full name to search API  
@@ -359,6 +360,9 @@ batch.POWO = function(name_in) {
     results = subset(results, select=c(IPNI_ID, name,author, accepted))
     
     colnames(results)[which(names(results) == "name")] = "name_in"
+    
+    # when one or more name search results are not accepted - do name match 
+    results = results[results$name_in %in%  name_in, ]   
     
     # take out any results where it matched on something that wasn't species 
     #results = subset(results, rank == "Species") 
@@ -675,6 +679,17 @@ eoo.aoo = function(native) {
   
   return(eoo.aoo.res)
 }
+
+
+#######################
+#full_name = "Poa annua"
+#ID = "320035-2"
+
+#batch_list = bermuda_1_10[3,2]
+
+#batch_name_check = lapply(batch_list, gbif.key)
+#result_batch = do.call(bind_rows, batch_name_check)
+###############
 
 # 3.15 combine functions to get LC results - use apply on this
 LC_comb = function(species) {
