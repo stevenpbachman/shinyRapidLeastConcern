@@ -279,7 +279,7 @@ ui <- fluidPage(
                         
     
              tabPanel("Help",
-                      includeHTML("README2.html")
+                      includeMarkdown("README.md")
              )
   )
 )

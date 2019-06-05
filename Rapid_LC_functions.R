@@ -304,6 +304,7 @@ check.accepted.POWO = function(name_in) {
 
 # 3.3b check name against POWO
 # takes binomial and checks against POWO (http://www.plantsoftheworldonline.org)
+
 batch.POWO = function(name_in) {
   
   # use name full name to search API  
@@ -334,8 +335,8 @@ batch.POWO = function(name_in) {
     #base_url = ""    
     IPNI_ID = ""
     #search_name = name_in
-    #fullname = name_in
-    results = data.frame(IPNI_ID, name_in,author, accepted)
+    fullname = ""
+    results = data.frame(IPNI_ID, fullname, name_in,author, accepted)
     
   } else {
     
@@ -360,6 +361,9 @@ batch.POWO = function(name_in) {
     
     colnames(results)[which(names(results) == "name")] = "name_in"
     
+    # when one or more name search results are not accepted - do name match 
+    results = results[results$name_in %in%  name_in, ]   
+    
     # take out any results where it matched on something that wasn't species 
     #results = subset(results, rank == "Species") 
     
@@ -376,12 +380,14 @@ batch.POWO = function(name_in) {
       #base_url = ""    
       IPNI_ID = ""
       #search_name = name_in 
-      #fullname = name_in
-      results = data.frame(IPNI_ID, name_in, author, accepted)
+      fullname = ""
+      results = data.frame(IPNI_ID, fullname, name_in, author, accepted)
+      
       
     }
     # make data frame
     results = as.data.frame(results)
+    results = unite(results, fullname, name_in, author, sep = " ", remove = F )
     results = results[1,]
   }
   
@@ -676,10 +682,31 @@ eoo.aoo = function(native) {
   return(eoo.aoo.res)
 }
 
+
+#######################
+#full_name = "Arctium intermedium"
+#ID = "11039-2"
+#name_in = full_name#
+
+#test = batch.POWO(full_name)
+
+#testkey = gbif.key(full_name)
+
+
+
+#applytest = lapply(bermuda_1_10$name_in,batch.POWO)
+#result_batch = do.call(bind_rows, applytest)
+
+#batch_list = result_batch[1:3,2]
+
+#batch_name_check = lapply(batch_list, gbif.key)
+#result_batch = do.call(bind_rows, batch_name_check)
+###############
+
 # 3.15 combine functions to get LC results - use apply on this
 LC_comb = function(species) {
   
-  full_name = species$name
+  full_name = species$fullname
   ID = species$IPNI_ID
   
   # get the gbif key or bail out if there is no match
@@ -697,6 +724,35 @@ LC_comb = function(species) {
       
     )
   }
+  
+  #################
+  # add in this section when GBIF thinks the species is not accepted.
+  else {
+    
+    search.df = c(
+      "PROPARTE_SYNONYM",
+      "DOUBTFUL",
+      "HETEROTYPIC_SYNONYM",
+      "HOMOTYPIC_SYNONYM",
+      "MISAPPLIED",
+      "SYNONYM"
+    )
+    
+    if(sp_key$status %in%  search.df){
+      
+      Results = data.frame(
+        EOO = NA,
+        AOO = NA,
+        RecordCount = NA,
+        TDWGCount = NA,
+        POWO_ID = ID,
+        full_name = full_name,
+        Warning = "Best name match against GBIF is not treated by GBIF as accepted")
+      
+    }
+  
+  
+  #############
   
   else {
     sp_key = sp_key[1, 1]
@@ -777,6 +833,7 @@ LC_comb = function(species) {
       }
     }
   } 
+ }
 }
 
 # 3.16 combine functions to get LC results - use apply on this
