@@ -4,7 +4,7 @@ author: Steven Bachman
 date: 3rd March 2019
 output:   
   html_document:
-    theme: paper
+    theme: simplex
     toc: true
     toc_depth: 4
     toc_float:
