@@ -45,6 +45,9 @@ library(rCAT)
 source("Rapid_LC_functions.R")
 
 
+# useful data on HTML for home page
+
+
 #### 3 - UI---------------
 ui <- fluidPage(
   
@@ -53,7 +56,41 @@ ui <- fluidPage(
   
   # Sidebar with a slider input for number of bins 
   navbarPage("Rapid Least Concern", id = "navLC",
-             tabPanel("1 Search",
+              tabPanel("Home",
+                wellPanel(
+                  tags$h1("Welcome to Rapid Least Concern"),
+                  
+                  br(),
+                  br(),
+                  
+                  tags$blockquote("
+                                  Rapid Least Concern combines data from GBIF and Plants of
+                                  the World Online to generate a Red List compliant Least Concern assessment."),
+                  br(),
+             
+                  actionButton("gotosingle", "Single assessment >>"),
+                  tags$h6("For generating Least Concern assessments one at a time."),
+                  
+                  br(),
+                  br(),
+                  
+                  actionButton("gotobatch", "Batch assessment >>"),
+                  tags$h6("For generating multiple Least Concern assessments based on a user-defined species list."),
+                  
+                  br(),
+                  br(),
+                  
+                  actionButton("gotobatch", "Batch - user points >>"),
+                  tags$h6("For generating multiple Least Concern assessments based on a user-defined species list and user-defined point data."),
+                  
+                  br(),
+                  br(),
+                  br(),
+                  HTML('<iframe width="400" height="200" src="https://www.youtube.com/embed/lJIrF4YjHfQ" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>')                 
+                  )
+                ),
+             
+              tabPanel("1 Single",
                       sidebarLayout(position = "left",
                                     sidebarPanel(
                                       textInput("speciesinput",
@@ -73,26 +110,62 @@ ui <- fluidPage(
                                       
                                       br(),
                                       
-                                      textInput("name",
-                                                "4 Enter name of assessor/compiler:",
-                                                placeholder = "John Smith"),
-                                      br(),
-                                      
-                                      textInput("email",
-                                                "5 Enter email of assessor/compiler:",
-                                                placeholder = "j.smith@email.com"),
-                                      
-                                      br(),
-                                      
-                                      textInput("affiliation",
-                                                "6 Affiliation of assessor/compiler:",
-                                                placeholder = "my institution"),
-                                      
-                                      br(),
-                                      actionButton("getPoints", "Go to section 2 >>")
+                                      #textInput("name",
+                                      #          "4 Enter name of assessor/compiler:",
+                                      #          placeholder = "John Smith"),
                                       #br(),
+                                      #
+                                      #textInput("email",
+                                      #          "5 Enter email of assessor/compiler:",
+                                      #          placeholder = "j.smith@email.com"),
+                                      #  
                                       #br(),
-                                      #helpText("Now go to tab '2 CLEAN' to clean the points")
+                                      #  
+                                      #textInput("affiliation",
+                                      #          "6 Affiliation of assessor/compiler:",
+                                      #          placeholder = "my institution"),
+                                      
+                                      
+                                      checkboxInput("native", "Remove non-native points", FALSE),
+                                      #actionButton("cleanPoints", "Map"),
+                                      
+                                      br(),
+                                     
+                                      actionButton("getPoints", "Map >>"),
+                                      
+                                      br(),
+                                      
+                                      helpText("Enter additional data for Habitat and Plant growth form:"),
+                                                   
+                                                   selectInput("gfinput",
+                                                               label = ("4. Select growth form(s)"), 
+                                                               choices = plantgflist[,2],
+                                                               selected = plantgflist[1,2],
+                                                               selectize = TRUE,
+                                                               multiple = TRUE),
+                                                   
+                                                   # multi select?
+                                                   selectInput("habinput",
+                                                               label = ("4. Select habitat(s)"), 
+                                                               #choices = list("Tree - size unknown" = 1, "Tree - large" = 2, "Tree - small" = 3),
+                                                               choices = habitatlist[,2],
+                                                               selected = habitatlist[126,2],
+                                                               selectize = TRUE,
+                                                               multiple = TRUE),
+                                                   
+                                                   br(),
+                                                   
+                                                   helpText("Download spatial point file:"),
+                                                   
+                                                   downloadButton('download', "Download clean point file"),
+                                                   
+                                                   br(),
+                                                   br(),
+                                                   
+                                                   helpText("Download SIS Connect csv files:"),
+                                                   
+                                                   downloadButton('downloadSIS', "Download SIS Connect Files")
+                                                   
                                       
                                     ),
                                     
@@ -110,92 +183,13 @@ ui <- fluidPage(
                                       # search results from POWO
                                       DT::dataTableOutput("powotab"),
                                       
-                                      #br(),
-                                      
-                                      #h6("Distribution map: "),
-                                      
-                                      #leaflet::leafletOutput("mymap", width = "100%", height = 400),
-                                      
-                                      #br(),
-                                      br()
-                                      
-                                    )
-                      )
-             ),
-             tabPanel("2 Clean",
-                      sidebarLayout(position = "left",
-                                    sidebarPanel(
-                                      
-                                      helpText("Select options below to clean the points "),
-                                      
-                                      #maybe checkbox group is better here - look up names
-                                      
                                       br(),
                                       
-                                      checkboxInput("native", "Remove non-native points", FALSE),
-
-                                      br(),
-                                      
-                                      actionButton("cleanPoints", "Clean"),
-                                      br(),
-                                      br(),
-                                      actionButton("goto3", "Go to section 3 >>")
-                                      #helpText("Now go to tab '3 DOWNLOAD' to save the point file and SIS CSV files")
-                                      
-                                    ),
-                                    
-                                    # Show the input species
-                                    mainPanel(
-                                      
-                                      h6("Raw Distribution map: "),
+                                      h6("Distribution map: "),
                                       leaflet::leafletOutput("mymap", width = "100%", height = 400),
                                       
-                                      h6("Clean Distribution map: "),
-                                      leaflet::leafletOutput("cleaningmap", width = "100%", height = 400)
+                                      br(),
                                       
-                                    )
-                      )
-                      
-             ),
-             
-             tabPanel("3 Download",
-                      sidebarLayout(position = "left",
-                                    sidebarPanel(helpText("Enter additional data for Habitat and Plant growth form:"),
-                                                 
-                                                 selectInput("gfinput",
-                                                             label = ("Select growth form(s)"), 
-                                                             choices = plantgflist[,2],
-                                                             selected = plantgflist[1,2],
-                                                             selectize = TRUE,
-                                                             multiple = TRUE),
-                                                 
-                                                 # multi select?
-                                                 selectInput("habinput",
-                                                             label = ("Select habitat(s)"), 
-                                                             #choices = list("Tree - size unknown" = 1, "Tree - large" = 2, "Tree - small" = 3),
-                                                             choices = habitatlist[,2],
-                                                             selected = habitatlist[126,2],
-                                                             selectize = TRUE,
-                                                             multiple = TRUE),
-                                                 
-                                                 br(),
-                                                 
-                                                 helpText("Download spatial point file:"),
-                                                 
-                                                 downloadButton('download', "Download clean point file"),
-                                                 
-                                                 br(),
-                                                 br(),
-                                                 
-                                                 helpText("Download SIS Connect csv files:"),
-                                                 
-                                                 downloadButton('downloadSIS', "Download SIS Connect Files")
-                                                 
-                                                 
-                                    ),
-                                    
-                                    # Show the input species
-                                    mainPanel(
                                       tabsetPanel(type = "tabs",
                                                   tabPanel("Point table", DT::dataTableOutput("pointstab")),
                                                   tabPanel("Allfields", DT::dataTableOutput("outallf")),
@@ -205,18 +199,19 @@ ui <- fluidPage(
                                                   tabPanel("Habitats", DT::dataTableOutput("outhab")),
                                                   tabPanel("Plant specific", DT::dataTableOutput("outgfinput"))
                                                   #tabPanel("Taxonomy", DT::dataTableOutput("outtax"))
-                                                  
-                                                  
-                                                  
-                                      )
+                    
+                                                  )
+                                      
                                     )
                       )
+              
              ),
              
-             tabPanel("4 Batch",
+
+             tabPanel("2 Batch",
 
                       sidebarPanel(
-                        fileInput("file1", "Upload a list of names from a CSV file",
+                        fileInput("file1", "Upload a list of names from a CSV file. One field must be called 'name_in' and should contain binomials e.g. 'Poa annua'",
                                 multiple = FALSE,
                                 accept = (".csv")
                                 ),
@@ -277,11 +272,14 @@ ui <- fluidPage(
                       
              ),
                         
-    
+             tabPanel("3 Batch - user points"
+                      #includeHTML("README.html")
+             ),
+             
              tabPanel("Help"
                       #includeHTML("README.html")
              )
-  )
+    )
 )
 
 
@@ -298,16 +296,9 @@ server <- function(input, output, session) {
                    points = gbif.points(input$key)
                  })
     points
-  })
-  
-  cleanmapInput <- eventReactive(input$getPoints, {
-    withProgress(message = 'Querying GBIF',
-                 value = 2, {
-                   points = gbif.points(input$key)
-                 })
-    points$COMPILER = paste0(input$name)
+    #points$COMPILER = paste0(input$name)
     ##, ", ", substr(input$firstname, 1, 1),".", input$initials, sep = "")
-    points$CITATION = paste0(input$affiliation, sep = "")
+    #points$CITATION = paste0(input$affiliation, sep = "")
     points = within(points, rm("issues", "datasetKey", "recordNumber", "recordedBy"))
     points
     
@@ -318,6 +309,7 @@ server <- function(input, output, session) {
     } else {
       points
     }
+    
     
   })
   
@@ -355,9 +347,9 @@ server <- function(input, output, session) {
                  value = 2, {
                    points = gbif.points(input$key)
                  })
-    points$COMPILER = paste0(input$name)
+    #points$COMPILER = paste0(input$name)
     ##, ", ", substr(input$firstname, 1, 1),".", input$initials, sep = "")
-    points$CITATION = paste0(input$affiliation, sep = "")
+    #points$CITATION = paste0(input$affiliation, sep = "")
     points = within(points, rm("issues", "datasetKey", "recordNumber", "recordedBy", "LEVEL3_NAM", "LEVEL3_COD",
                                "VALUE",	"ID",	"LEVEL2_COD",	"LEVEL1_COD",	"establishment",	"featureId",	"tdwgLevel",	"POWO_ID"))
     points$BINOMIAL = input$speciesinput
