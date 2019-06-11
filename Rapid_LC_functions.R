@@ -207,12 +207,15 @@ gbif.points = function(key) {
       
       # reformat to iucn standard
       res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "FOSSIL_SPECIMEN","FossilSpecimen" )
-      res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "PRESERVED_SPECIMEN","PreservedSpecimen" )
-      res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "LIVING_SPECIMEN", "LivingSpecimen")
       res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "HUMAN_OBSERVATION", "HumanObservation")
+      res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "LITERATURE", "")
+      res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "LIVING_SPECIMEN", "LivingSpecimen")
       res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "MACHINE_OBSERVATION","MachineObservation")
+      res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "OBSERVATION","" )
+      res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "PRESERVED_SPECIMEN","PreservedSpecimen" )
       res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "UNKNOWN","Unknown")
       
+      # remove fossils? Literature and Unknown are not recognised in IUCN standards.
     }
   }
   return(res)
@@ -592,6 +595,13 @@ plantspecific = function(gfinput, species, ID) {
   return(gf)
 }
 
+##############
+#key = "5294468"
+#species = "Aloe zebrina"
+#ID = "530052-1"
+################
+
+
 # 3.12 SIS files taxonomy.csv
 taxonomy = function(key, species, ID){
   
@@ -650,10 +660,10 @@ all_SIS = function(species, powo, name, email, affiliation, habitat, growthform,
   plantspecific = plantspecific(growthform, species, powo)
   write.csv(plantspecific, plantspath, row.names = FALSE)
   
-  #taxpath = paste0(getwd(), "/data/singlezip/taxonomy.csv")
+  taxpath = paste0(getwd(), "/data/singlezip/taxonomy.csv")
   ##taxtable =  taxinput()
-  #taxtable = taxonomy(key, species, powo)
-  #write.csv(taxtable, taxpath)
+  taxtable = taxonomy(key, species, powo)
+  write.csv(taxtable, taxpath, row.names = FALSE)
   
 }
 

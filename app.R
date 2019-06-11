@@ -39,14 +39,11 @@ library(stringr)
 library(shiny)
 library(plyr)
 library(rCAT)
+library(flexdashboard)
 
 
 #### 2 - Source the functions---------------
 source("Rapid_LC_functions.R")
-
-
-# useful data on HTML for home page
-
 
 #### 3 - UI---------------
 ui <- fluidPage(
@@ -54,7 +51,7 @@ ui <- fluidPage(
   # set themes
   theme = shinythemes::shinytheme("simplex"),
   
-  # Sidebar with a slider input for number of bins 
+  # Navigation
   navbarPage("Rapid Least Concern", id = "navLC",
               tabPanel("Home",
                 wellPanel(
@@ -63,26 +60,22 @@ ui <- fluidPage(
                   br(),
                   br(),
                   
-                  tags$blockquote("
-                                  Rapid Least Concern combines data from GBIF and Plants of
+                  tags$blockquote("Rapid Least Concern combines plant data from GBIF and Plants of
                                   the World Online to generate a Red List compliant Least Concern assessment."),
                   br(),
              
                   actionButton("gotosingle", "Single assessment >>"),
-                  tags$h6("For generating Least Concern assessments one at a time."),
+                  tags$h5("For generating Least Concern assessments one at a time."),
                   
                   br(),
                   br(),
                   
                   actionButton("gotobatch", "Batch assessment >>"),
-                  tags$h6("For generating multiple Least Concern assessments based on a user-defined species list."),
+                  tags$h5("For generating multiple Least Concern assessments based on a user-defined species list."),
                   
                   br(),
                   br(),
-                  
-                  actionButton("gotobatch", "Batch - user points >>"),
-                  tags$h6("For generating multiple Least Concern assessments based on a user-defined species list and user-defined point data."),
-                  
+
                   br(),
                   br(),
                   br(),
@@ -109,84 +102,136 @@ ui <- fluidPage(
                                       ),
                                       
                                       br(),
-                                      
-                                      #textInput("name",
-                                      #          "4 Enter name of assessor/compiler:",
-                                      #          placeholder = "John Smith"),
-                                      #br(),
-                                      #
-                                      #textInput("email",
-                                      #          "5 Enter email of assessor/compiler:",
-                                      #          placeholder = "j.smith@email.com"),
-                                      #  
-                                      #br(),
-                                      #  
-                                      #textInput("affiliation",
-                                      #          "6 Affiliation of assessor/compiler:",
-                                      #          placeholder = "my institution"),
-                                      
-                                      
+                          
                                       checkboxInput("native", "Remove non-native points", FALSE),
-                                      #actionButton("cleanPoints", "Map"),
                                       
-                                      br(),
-                                     
                                       actionButton("getPoints", "Map >>"),
                                       
+                                      actionButton('getSingleStats', "Get statistics >>"),
+                                      
+                                      br(),
                                       br(),
                                       
-                                      helpText("Enter additional data for Habitat and Plant growth form:"),
-                                                   
-                                                   selectInput("gfinput",
-                                                               label = ("4. Select growth form(s)"), 
-                                                               choices = plantgflist[,2],
-                                                               selected = plantgflist[1,2],
-                                                               selectize = TRUE,
-                                                               multiple = TRUE),
-                                                   
-                                                   # multi select?
-                                                   selectInput("habinput",
-                                                               label = ("4. Select habitat(s)"), 
-                                                               #choices = list("Tree - size unknown" = 1, "Tree - large" = 2, "Tree - small" = 3),
-                                                               choices = habitatlist[,2],
-                                                               selected = habitatlist[126,2],
-                                                               selectize = TRUE,
-                                                               multiple = TRUE),
-                                                   
-                                                   br(),
-                                                   
-                                                   helpText("Download spatial point file:"),
-                                                   
-                                                   downloadButton('download', "Download clean point file"),
-                                                   
-                                                   br(),
-                                                   br(),
-                                                   
-                                                   helpText("Download SIS Connect csv files:"),
-                                                   
-                                                   downloadButton('downloadSIS', "Download SIS Connect Files")
+                                      # extra data that can't be generated automatically - ask user to input or select
+                                      actionButton("addData", "4. Enter Additional Data >>", style='padding:4px; font-size:80%'),
+                                      
+                                      br(),
+                                      
+                                      conditionalPanel(
+                                        condition = "input.addData % 2 == 0",selectInput(
+                                          "gfinput",
+                                          label = ("Select growth form(s)"),
+                                          choices = plantgflist[, 2],
+                                          selected = plantgflist[1, 2],
+                                          selectize = TRUE,
+                                          multiple = TRUE
+                                        )
+                                      ),
+                                      
+                                      conditionalPanel(
+                                        condition = "input.addData % 2 == 0",selectInput(
+                                          "habinput",
+                                          label = ("Select habitat(s)"),
+                                          #choices = list("Tree - size unknown" = 1, "Tree - large" = 2, "Tree - small" = 3),
+                                          choices = habitatlist[, 2],
+                                          selected = habitatlist[126, 2],
+                                          selectize = TRUE,
+                                          multiple = TRUE
+                                        )
+                                      ),
+                                      
+                                      conditionalPanel(
+                                        condition = "input.addData % 2 == 0",textInput("name",
+                                                                                       "Enter name of assessor/compiler:",
+                                                                                       placeholder = "John Smith")
+                                      ),
+                                      
+                                      conditionalPanel(
+                                        condition = "input.addData % 2 == 0",textInput("email",
+                                                                                      "Enter email of assessor/compiler:",
+                                                                                      placeholder = "j.smith@email.com")
+                                      ),
+                                      
+                                      conditionalPanel(
+                                        condition = "input.addData % 2 == 0",textInput("affiliation",
+                                                                                       "Affiliation of assessor/compiler:",
+                                                                                       placeholder = "my institution")
+                                      ),
+                                      #helpText("4. Enter additional data for Habitat and Plant growth form:"),
+                                      #tags$h5("4. Enter additional data"),
+                                      
+  
+                                      br(),
+                                      
+                                      #helpText("Download spatial point file:"),
+                                      
+                                      tags$blockquote("
+                                      Check the generated map and table data. If correct, then download the point file and SIS connect files"),
+                                      
+                                      tags$h5("5. Download data:"),
+                                      
+                                      downloadButton('download', "Download clean point file"),
+                                      
+                                      br(),
+                                 
+                                      helpText("Download SIS Connect csv files:"),
+                                      
+                                      downloadButton('downloadSIS', "Download SIS Connect Files")
                                                    
                                       
                                     ),
                                     
-                                    # Show the input species
+                                    # Show the results of the name search against GBIF and POWO
                                     mainPanel(
                                       
+                                      actionButton("minmaxgbif", "Minimise/maximise", style='padding:4px; font-size:80%'),
+                                      
+                                      br(),
+                                      
                                       # Output: Header + summary of distribution ----
-                                      h6("GBIF search results:"),
+                                      #h6("GBIF search results:"),
                                       # search results from GBIF
-                                      DT::dataTableOutput("summarytab"),
-       
+                                      conditionalPanel(
+                                        condition = "input.minmaxgbif % 2 == 0",DT::dataTableOutput("summarytab")
+                                      ),
+                                      
+                                      conditionalPanel(
+                                        condition = "input.minmaxgbif % 2 == 0",DT::dataTableOutput("powotab")
+                                      ),
+                                   
+                                      
                                       br(),
                                       
-                                      h6("Plant of the World Online search results:"),
+                                      #actionButton("minmaxpowo", "Minimise/maximise"),
+                                      
+                                      # Output: Header + summary of distribution ----
+                                      #h6("GBIF search results:"),
+                                      # search results from GBIF
+                                      #conditionalPanel(
+                                      #  condition = "input.minmax.powo % 2 == 0",DT::dataTableOutput("powotab")
+                                      #),
+                                      
+                                      #h6("Plant of the World Online search results:"),
                                       # search results from POWO
-                                      DT::dataTableOutput("powotab"),
+                                      #DT::dataTableOutput("powotab"),
                                       
                                       br(),
                                       
-                                      h6("Distribution map: "),
-                                      leaflet::leafletOutput("mymap", width = "100%", height = 400),
+                                      actionButton("minmaxmapstats", "Minimise/maximise", style='padding:4px; font-size:80%'),
+                                      
+                                      conditionalPanel(
+                                        condition = "input.minmaxmapstats % 2 == 0",leaflet::leafletOutput("mymap", width = "100%", height = 400)
+                                      ),
+                                      
+                                      conditionalPanel(
+                                        condition = "input.minmaxmapstats % 2 == 0",DT::dataTableOutput("singletab")
+                                      ),
+                                      
+                                      #h6("Distribution map: "),
+                                      #leaflet::leafletOutput("mymap", width = "100%", height = 400),
+                                      
+                                      # results 
+                                      #DT::dataTableOutput("singletab"),
                                       
                                       br(),
                                       
@@ -197,10 +242,16 @@ ui <- fluidPage(
                                                   tabPanel("Countries", DT::dataTableOutput("outocc")),
                                                   tabPanel("Credits", DT::dataTableOutput("outcredits")),
                                                   tabPanel("Habitats", DT::dataTableOutput("outhab")),
-                                                  tabPanel("Plant specific", DT::dataTableOutput("outgfinput"))
-                                                  #tabPanel("Taxonomy", DT::dataTableOutput("outtax"))
+                                                  tabPanel("Plant specific", DT::dataTableOutput("outgfinput")),
+                                                  tabPanel("Taxonomy", DT::dataTableOutput("outtax"))
                     
-                                                  )
+                                                  ),
+                                      br(),
+                                      #flexdashboard::gaugeOutput("plt1"),width=12,title="Gauge Graph",background ="green",
+                                      br(),
+                                      br(),
+                                      br(),
+                                      br()
                                       
                                     )
                       )
@@ -208,6 +259,7 @@ ui <- fluidPage(
              ),
              
 
+             # batch option - user needs to load in list of species names as binomials under column: 'name_in' 
              tabPanel("2 Batch",
 
                       sidebarPanel(
@@ -286,9 +338,36 @@ ui <- fluidPage(
 ### 4 - Server---------------
 server <- function(input, output, session) {
   
-  ############  INPUTS ############
   
-  ### 1. Search inputs
+# testing this out - use gauges to show results against LC thresholds
+# working, but screws up the layout
+# see bottom of single page UI - main   
+#output$plt1 <- flexdashboard::renderGauge({
+#    gauge(56, min = 0, max = 100, symbol = '%', label = paste("Test Label"),gaugeSectors(
+#      success = c(100, 6), warning = c(5,1), danger = c(0, 1), colors = c("#CC6699")
+#    ))
+#})
+  
+############  INPUTS ############
+  
+  ### Home page navigation
+  
+  # link to navpanel 1 single
+  observeEvent(input$gotosingle, {
+    updateTabsetPanel(session, "navLC",
+                      selected = "1 Single"
+    )
+  })
+  
+  # link to navpanel 2 batch
+  observeEvent(input$gotobatch, {
+    updateTabsetPanel(session, "navLC",
+                      selected = "2 Batch"
+    )
+  })
+  
+  
+  ### 1 Single -  prepare map input
   
   mapInput <- eventReactive(input$getPoints, {
     withProgress(message = 'Querying GBIF',
@@ -313,7 +392,7 @@ server <- function(input, output, session) {
     
   })
   
-  ### 1. Search outputs
+  ### 1 Single - prepare name search results output
   
   #Show results of GBIF search as a table
   output$summarytab <- DT::renderDataTable({
@@ -330,52 +409,18 @@ server <- function(input, output, session) {
     req(input$speciesinput)
     powosp = check.accepted.POWO(input$speciesinput)
     
-  }, 
+  },
   options = list(pageLength = 5))
   
-  # link to navpanel 2 Clena
-  observeEvent(input$goto3, {
-    updateTabsetPanel(session, "navLC",
-                      selected = "3 Download"
-    )
-  })
+
+#######################################################
   
-  ### 2. clean inputs
+  ### 1. Single - map render
   
-  cleaningmapInput <- eventReactive(input$cleanPoints, {
-    withProgress(message = 'Querying GBIF',
-                 value = 2, {
-                   points = gbif.points(input$key)
-                 })
-    #points$COMPILER = paste0(input$name)
-    ##, ", ", substr(input$firstname, 1, 1),".", input$initials, sep = "")
-    #points$CITATION = paste0(input$affiliation, sep = "")
-    points = within(points, rm("issues", "datasetKey", "recordNumber", "recordedBy", "LEVEL3_NAM", "LEVEL3_COD",
-                               "VALUE",	"ID",	"LEVEL2_COD",	"LEVEL1_COD",	"establishment",	"featureId",	"tdwgLevel",	"POWO_ID"))
-    points$BINOMIAL = input$speciesinput
-    points
-    
-    if (input$native == TRUE) {
-      #points = subset(points, points$EVENT_YEAR < "1950")
-      powo = input$powo
-      points = native.clip(points, TDWGpolys, powo)
-      points = within(points, rm("issues", "datasetKey", "recordNumber", "recordedBy", "LEVEL3_NAM", "LEVEL3_COD",
-                                 "VALUE",	"ID",	"LEVEL2_COD",	"LEVEL1_COD",	"establishment",	"featureId",	"tdwgLevel",	"POWO_ID"))
-    } else {
-      points$BINOMIAL = input$speciesinput
-      points
-    }
-    
-  })
-  
-  #######################################################
-  
-  ### 2. clean outputs
-  
-  # output for the map on Cleanpage
+  # Output map
   output$mymap <- renderLeaflet({
     df <- mapInput()
-    sptdwg = tdwg.dist = check.tdwg(input$powo)
+    tdwg.dist = check.tdwg(input$powo)
     sptdwg = merge(TDWGpolys, tdwg.dist)
     
     leaflet(data = df) %>%
@@ -394,70 +439,56 @@ server <- function(input, output, session) {
     
   })
   
-  # output for the clean map on clean page
-  output$cleaningmap <- renderLeaflet({
-    df <- cleaningmapInput()
-    sptdwg = tdwg.dist = check.tdwg(input$powo)
-    sptdwg = merge(TDWGpolys, tdwg.dist)
+  #### 1 Single - generate statistics - EOO, AOO etc. using LC_comb function
+  SingleStats <- eventReactive(input$getSingleStats, {
+    #species = batchInput()
     
-    leaflet(data = df) %>%
-      addMapPane("points", zIndex = 420) %>%
-      addMapPane("poly", zIndex = 410) %>%
-      addCircleMarkers(lng = ~DEC_LONG,
-                       lat = ~DEC_LAT, radius = 4, color = "green", popup = paste("Collector:", df$recordedBy, "<br>",
-                                                                                  "Number:", df$recordNumber, "<br>",
-                                                                                  "Year:", df$EVENT_YEAR, "<br>",
-                                                                                  "Catalogue No.:", df$CATALOG_NO),
-                       options = pathOptions(pane = "points")) %>%
-      # maybe add an IF here to control whether native range is mapped
-      addPolygons(data=sptdwg, color = "red", weight = 1, fillColor = "red", fillOpacity = 0.2, options = pathOptions(pane = "poly")) %>%
-      addProviderTiles(providers$OpenStreetMap,
-                       options = providerTileOptions(noWrap = TRUE))
+    # get the summary table first - 
+    single_powo = batch.POWO(input$speciesinput)
     
+    withProgress(message = 'Getting there...',
+                 value = 2, {
+                   single = LC_comb(single_powo)
+                 })
+    df = single
+    df
   })
   
-  # link to navpanel 3 Download
-  observeEvent(input$getPoints, {
-    updateTabsetPanel(session, "navLC",
-                      selected = "2 Clean"
-    )
-  })
-  
-  
-  
-  ### 3. Download inputs
-  
-  taxinput = eventReactive(input$key, {
-    tax = taxonomy(input$key, input$speciesinput, input$powo)
-    #credits$internal_taxon_id = input$datasetInput[1,1]
-    tax
-  })
-  
-  
-  #######################################################
-  
-  ### 3. Download outputs
-  
-  # Show GBIF occurrence points
-  output$pointstab <- DT::renderDataTable({
+  # output stats table 
+  output$singletab <- DT::renderDataTable({
     req(input$speciesinput)
-    df = cleaningmapInput()
+    df = SingleStats()
     df
   }, 
   options = list(pageLength = 5))
   
-  # download the cleaned gbif point file
+
+    ### 1 single - prepare download outputs
+  
+  # Show GBIF occurrence points
+  output$pointstab <- DT::renderDataTable({
+    req(input$speciesinput)
+    df = mapInput()
+    df
+  }, 
+  options = list(pageLength = 5))
+  
+  # download the cleaned gbif point file - adding in compiler and citation if added after map was first generated
   output$download = downloadHandler(
     filename = function(){
       paste(input$speciesinput, "_", Sys.Date(), ".csv", sep = "" ) # change this to species name
     },
     content = function(file){
-      write.csv(cleaningmapInput(), file, row.names = FALSE)
+      df = mapInput()
+      df$COMPILER = paste0(input$name)
+      ##, ", ", substr(input$firstname, 1, 1),".", input$initials, sep = "")
+      df$CITATION = paste0(input$affiliation, sep = "")
       
-    }
+      write.csv(df, file, row.names = FALSE)
+      }
   )
   
-  # Show csv files as data tables before download
+  # Show csv files in mainpanel as data tables before download
   output$outallf <- DT::renderDataTable({
     allfields = allfields(input$speciesinput, input$powo)
     #credits$internal_taxon_id = input$datasetInput[1,1]
@@ -495,11 +526,11 @@ server <- function(input, output, session) {
     plantspecific
   })
   
-  #output$outtax <- DT::renderDataTable({
+  output$outtax <- DT::renderDataTable({
   #  taxtable = taxinput()
-  #  #taxtable = taxonomy(input$key, input$speciesinput, input$powo)
-  #  taxtable
-  #})
+  taxtable = taxonomy(input$key, input$speciesinput, input$powo)
+    taxtable
+  })
   
   # download the SIS connect files
   output$downloadSIS = downloadHandler(
@@ -525,8 +556,8 @@ server <- function(input, output, session) {
                    "data/singlezip/countries.csv",
                    "data/singlezip/credits.csv",
                    "data/singlezip/habitats.csv",
-                   "data/singlezip/plantspecific.csv")
-                   #"singlezip/taxonomy.csv")
+                   "data/singlezip/plantspecific.csv",
+                   "data/singlezip/taxonomy.csv")
       
       #files2zip <- dir(zipdir, full.names = TRUE)
       zip::zipr('singlezip.zip', thefiles)
@@ -541,11 +572,11 @@ server <- function(input, output, session) {
   
   #######################################################
   
-  ### 4. Batch inputs
+  ### 2. Batch inputs
   batchInput <- eventReactive(input$file1, {
     
     df <- read.csv(input$file1$datapath)
-    # 3.14
+    
     # check the names against POWO first
     withProgress(message = 'Getting there...',
                  value = 2, {
@@ -595,7 +626,7 @@ server <- function(input, output, session) {
   
 
   
-  ### 4. Batch outputs
+  ### 2. Batch outputs
   output$contents <- DT::renderDataTable({
     df = batchInput()
     df
