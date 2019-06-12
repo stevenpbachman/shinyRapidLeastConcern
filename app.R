@@ -20,6 +20,7 @@
 
 
 #### 1 - libraries
+library(here)
 library(magrittr)
 library(readr)
 library(rgdal)
@@ -37,10 +38,9 @@ library(wicket)
 library(sf)
 library(stringr)
 library(shiny)
-library(plyr)
 library(rCAT)
 library(flexdashboard)
-library(here)
+
 
 #### 2 - Source the functions---------------
 source("Rapid_LC_functions.R")
