@@ -1,15 +1,13 @@
 
-path = paste0("C:/Users/sb42kg/OneDrive - The Royal Botanic Gardens, Kew/01_Projects/R_projects/rapidLC_top/data/")
-
 #### 2 - shapefiles/rasters/other files---------------
-TDWGpolys = sf::read_sf(paste0(path,"level3/level3.shp"))
+TDWGpolys = sf::read_sf(here("data","level3/level3.shp"))
 #TDWGpolys = rgdal::readOGR("level3/level3.shp")
-raster.tdwg = raster::raster(paste0(path,"rasters/tdwg3.tiff"))
-tdwg_raster <- read.csv(paste0(path,"tdwg_raster.csv"))
-plantgflist <- read.csv(paste0(path,"plantgrowthformslookup.csv"), encoding="UTF-16")
-habitatlist <- read.csv(paste0(path,"habitatslookup.csv"), encoding="UTF-16")
-taxonomy_iucn <- read.csv(paste0(path,"taxonomy_iucn_lookup.csv"), encoding="UTF-16")
-TDWG_to_IUCN_version3_UTF <- read.delim(paste0(path,"TDWG_to_IUCN.txt"), encoding="UTF-16", na.strings="")
+raster.tdwg = raster::raster(here("data","rasters/tdwg3.tiff"))
+tdwg_raster <- read.csv(here("data","tdwg_raster.csv"))
+plantgflist <- read.csv(here("data","plantgrowthformslookup.csv"), encoding="UTF-16")
+habitatlist <- read.csv(here("data","habitatslookup.csv"), encoding="UTF-16")
+taxonomy_iucn <- read.csv(here("data","taxonomy_iucn_lookup.csv"), encoding="UTF-16")
+TDWG_to_IUCN_version3_UTF <- read.delim(here("data","TDWG_to_IUCN.txt"), encoding="UTF-16", na.strings="")
 
 
 
@@ -633,34 +631,34 @@ taxonomy = function(key, species, ID){
 # 3.13 save all SIS files
 all_SIS = function(species, powo, name, email, affiliation, habitat, growthform, key){
   
-  do.call(file.remove, list(list.files(paste0(getwd(), "/data/singlezip/"), full.names = TRUE)))
+  do.call(file.remove, list(list.files(here("data/singlezip/"), full.names = TRUE)))
   
   
-  allfpath = paste0(getwd(), "/data/singlezip/allfields.csv")
+  allfpath = here("data/singlezip/allfields.csv")
   allfields = allfields(species, powo)
   write.csv(allfields, allfpath, row.names = FALSE)
   
-  assessmentspath = paste0(getwd(), "/data/singlezip/assessments.csv")
+  assessmentspath = here("data/singlezip/assessments.csv")
   assessmentstable = assessments(species, powo)
   write.csv(assessmentstable, assessmentspath, row.names = FALSE)
   
-  occspath = paste0(getwd(), "/data/singlezip/countries.csv")
+  occspath = here("data/singlezip/countries.csv")
   occstable = countries(powo)
   write.csv(occstable, occspath, row.names = FALSE)
   
-  credpath = paste0(getwd(), "/data/singlezip/credits.csv")
+  credpath = here("data/singlezip/credits.csv")
   credits = credits(name, email, affiliation, species, powo)
   write.csv(credits, credpath, row.names = FALSE)
   
-  habitatpath = paste0(getwd(), "/data/singlezip/habitats.csv")
+  habitatpath = here("data/singlezip/habitats.csv")
   hab = habitats(habitat, species, powo)
   write.csv(hab, habitatpath, row.names = FALSE)
   
-  plantspath = paste0(getwd(), "/data/singlezip/plantspecific.csv")
+  plantspath = here("data/singlezip/plantspecific.csv")
   plantspecific = plantspecific(growthform, species, powo)
   write.csv(plantspecific, plantspath, row.names = FALSE)
   
-  taxpath = paste0(getwd(), "/data/singlezip/taxonomy.csv")
+  taxpath = here("data/singlezip/taxonomy.csv")
   ##taxtable =  taxinput()
   taxtable = taxonomy(key, species, powo)
   write.csv(taxtable, taxpath, row.names = FALSE)
