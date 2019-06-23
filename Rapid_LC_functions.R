@@ -712,11 +712,7 @@ eoo.aoo = function(native) {
 ###############
 
 # 3.15 combine functions to get LC results - use apply on this
-LC_comb = function(species) {
-  
-  full_name = species$fullname
-  ID = species$IPNI_ID
-  
+LC_comb = function(full_name, ID) {
   # get the gbif key or bail out if there is no match
   sp_key = gbif.key(full_name)
   
@@ -745,8 +741,8 @@ LC_comb = function(species) {
       "MISAPPLIED",
       "SYNONYM"
     )
-    
-    if(sp_key$status %in%  search.df){
+
+    if(sp_key$status[1] %in%  search.df){
       
       Results = data.frame(
         EOO = NA,
