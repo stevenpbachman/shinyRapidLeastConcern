@@ -18,7 +18,18 @@ TDWG_to_IUCN_version3_UTF <- read.delim(here("data","TDWG_to_IUCN.txt"), encodin
 # 3.1 get the gbif key
 gbif.key = function (full_name) {
   
-  gbif.key = rgbif::name_backbone(
+  options = data.frame(
+    usageKey = NA_integer_,
+    acceptedUsageKey = NA_character_,
+    scientificName = NA_character_,
+    rank = NA_character_,
+    status = NA_character_,
+    confidence = NA_integer_,
+    family = NA_character_,
+    acceptedSpecies = NA_character_
+  )
+  
+  gbif_results = name_backbone(
     name = full_name,
     rank = 'species',
     kingdom = 'Plantae',
@@ -27,51 +38,24 @@ gbif.key = function (full_name) {
   )
   
   # bind together in case there are missing data
-  merged = dplyr::bind_rows(gbif.key$alternatives, gbif.key$data)
+  merged = bind_rows(gbif_results$alternatives, gbif_results$data)
   
-  if (merged$matchType == "HIGHERRANK" && nrow(merged) == 1){
-    
-    options = data.frame(
-      usageKey = as.integer(""),
-      acceptedUsageKey = as.character(""),
-      scientificName = as.character(""),
-      rank = as.character(""),
-      status = as.character(""),
-      confidence = as.integer(""),
-      family = as.character(""),
-      acceptedSpecies = as.character("")
-    )
-    
-  }
-  
-  else {
+  if (nrow(merged) > 1 | merged$matchType[1] != "HIGHERRANK") {
     # change col names
-    colnames(merged)[which(names(merged) == "species")] = "acceptedSpecies"
+    merged = rename(merged, acceptedSpecies=species)
     
     if (!"acceptedUsageKey" %in% colnames(merged)) {
-      merged$acceptedUsageKey = NA
-      as.character(merged$acceptedUsageKey)
+      merged$acceptedUsageKey = NA_character_
     }
     
     # subset the data with the fields you want
-    options = subset(
-      merged,
-      select = c(
-        usageKey,
-        acceptedUsageKey,
-        scientificName,
-        rank,
-        status,
-        confidence,
-        family,
-        acceptedSpecies
-      )
-    )
-    
+    options = select(merged, colnames(options))
+  
     # arrange table in descending order to show best guess at top of table
-    options = dplyr::arrange(options, desc(confidence))
-    return(options)
+    options = arrange(options, desc(confidence))
   }
+  
+  options
 }
 
 # 3.2 fetch the points using key
