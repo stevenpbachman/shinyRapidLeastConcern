@@ -448,7 +448,7 @@ server <- function(input, output, session) {
     
     withProgress(message = 'Getting there...',
                  value = 2, {
-                   single = LC_comb(single_powo)
+                   single = LC_comb(single_powo$fullname, single_powo$IPNI_ID)
                  })
     df = single
     df
@@ -618,7 +618,7 @@ server <- function(input, output, session) {
     #single = LC_comb(species)
     withProgress(message = 'Getting there...',
                  value = 2, {
-                   multi = adply(species, 1, LC_comb)
+                   multi = purrr::map2_dfr(species$fullname, species$IPNI_ID, LC_comb)
                  })
     df = multi
     df
