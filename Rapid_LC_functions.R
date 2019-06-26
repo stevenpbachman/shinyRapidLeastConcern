@@ -227,13 +227,6 @@ deduplicate_by <- function(.data, ...) {
     group_by(!!! group_vars) %>%
     filter(row_number() == 1) %>%
     ungroup()
-
-deduplicate_by <- function(.data, ...) {
-  group_vars <- enquos(...)
-  .data %>%
-    group_by(!!! group_vars) %>%
-    filter(row_number() == 1) %>%
-    ungroup()
 }
 
 # 3.5 native range clip
