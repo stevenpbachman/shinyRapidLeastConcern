@@ -135,16 +135,19 @@ gbif.points = function(key) {
 # 3.3 check name against POWO
 # takes binomial and checks against POWO (http://www.plantsoftheworldonline.org)
 check.accepted.POWO = function(name_in) {
-  
+
+  powo_results <- tibble(
+    IPNI_ID=NA_character_,
+    name=NA_character_,
+    author=NA_character_,
+    accepted=NA
+  )
+
   # use name full name to search API  
   full_url =  paste("http://plantsoftheworldonline.org/api/1/search?q=names:", name_in, sep = "")
-  #full_url =  paste("http://plantsoftheworld.online/api/2/search?q=", name_in, sep = "")
   
   # encode
   full_url = utils::URLencode(full_url)
-  
-  # new api 2
-  #http://plantsoftheworld.online/api/2/taxon/urn:lsid:ipni.org:names:594092-1
   
   # get raw json data
   raw.data <- readLines(full_url, warn = "F", encoding = "UTF-8")
@@ -152,67 +155,19 @@ check.accepted.POWO = function(name_in) {
   # organise
   rd = jsonlite::fromJSON(raw.data)
   
-  if (length(rd$results) == 0) {
-    # add new column to results and call it warning
-    
-    accepted = "NA"          
-    author = ""  
-    #kingdom = ""  
-    name = ""  
-    #rank  = "" 
-    #synonymOf = ""
-    #base_url = ""    
-    IPNI_ID = ""
-    #search_name = name_in
-    #fullname = name_in
-    results = data.frame(IPNI_ID, name,author, accepted)
-    
-  } else {
-    
+  if (length(rd$results) > 0) {
+
     # make data frame
-    results = as.data.frame(rd$results)
+    results = rd$results
     
-    # add original search term
-    #results$search_name = name_in
-    #results$fullname = name_in
-    
-    
-    # PROBLEM HERE - var with no author - replace with blank field?
-    if (!"author" %in% colnames(results)) {
-      results$author = NA
-    }
-    
-    # split url to get url and IPNI_ID
-    results = results %>% tidyr::separate(url, into = c("base_url", "IPNI_ID"), sep = "names:")
-    
+    # get IPNI ID
+    results = mutate(results, IPNI_ID=str_extract(url, "(?<=names\\:)[\\d\\-]+$"))
+
     # only include these fields - you don't want synonym of
-    results = subset(results, select=c(IPNI_ID, name,author, accepted))
-    
-    # take out any results where it matched on something that wasn't species 
-    #results = subset(results, rank == "Species") 
-    
-    # check if 
-    if (nrow(results) < 1) {
-      # add new column to results and call it warning
-      
-      accepted = "NA"          
-      author = ""  
-      #kingdom = ""  
-      name = ""  
-      #rank  = "" 
-      #synonymOf = ""
-      #base_url = ""    
-      IPNI_ID = ""
-      #search_name = name_in 
-      #fullname = name_in
-      results = data.frame(IPNI_ID, name,author, accepted)
-      
-    }
-    # make data frame
-    results = as.data.frame(results)
+    powo_results = select(results, colnames(powo_results))
   }
   
-  return(results)
+  return(powo_results)
   
 }
 
