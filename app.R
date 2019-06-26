@@ -184,23 +184,23 @@ ui <- fluidPage(
                                     # Show the results of the name search against GBIF and POWO
                                     mainPanel(
                                       
-                                      actionButton("minmaxgbif", "Minimise/maximise", style='padding:4px; font-size:80%'),
+                                      # Output: Header + summary of distribution ----
+                                      actionButton("minmaxgbif", "Minimise/maximise search results", style='padding:4px; font-size:80%'),
                                       
                                       br(),
                                       
-                                      # Output: Header + summary of distribution ----
-                                      #h6("GBIF search results:"),
+                                      
                                       # search results from GBIF
+                                      h5("GBIF search results:"),
                                       conditionalPanel(
                                         condition = "input.minmaxgbif % 2 == 0",DT::dataTableOutput("summarytab")
                                       ),
                                       
+                                      h5("Plant of the World Online search results:"),
                                       conditionalPanel(
                                         condition = "input.minmaxgbif % 2 == 0",DT::dataTableOutput("powotab")
                                       ),
                                    
-                                      
-                                      br(),
                                       
                                       #actionButton("minmaxpowo", "Minimise/maximise"),
                                       
@@ -211,13 +211,15 @@ ui <- fluidPage(
                                       #  condition = "input.minmax.powo % 2 == 0",DT::dataTableOutput("powotab")
                                       #),
                                       
-                                      #h6("Plant of the World Online search results:"),
+                                      
                                       # search results from POWO
                                       #DT::dataTableOutput("powotab"),
                                       
                                       br(),
                                       
-                                      actionButton("minmaxmapstats", "Minimise/maximise", style='padding:4px; font-size:80%'),
+                                      actionButton("minmaxmapstats", "Minimise/maximise map", style='padding:4px; font-size:80%'),
+                                      
+                                      h5("Distribution map: "),
                                       
                                       conditionalPanel(
                                         condition = "input.minmaxmapstats % 2 == 0",leaflet::leafletOutput("mymap", width = "100%", height = 400)
@@ -227,7 +229,7 @@ ui <- fluidPage(
                                         condition = "input.minmaxmapstats % 2 == 0",DT::dataTableOutput("singletab")
                                       ),
                                       
-                                      #h6("Distribution map: "),
+                                      
                                       #leaflet::leafletOutput("mymap", width = "100%", height = 400),
                                       
                                       # results 
@@ -235,17 +237,25 @@ ui <- fluidPage(
                                       
                                       br(),
                                       
-                                      tabsetPanel(type = "tabs",
-                                                  tabPanel("Point table", DT::dataTableOutput("pointstab")),
-                                                  tabPanel("Allfields", DT::dataTableOutput("outallf")),
-                                                  tabPanel("Assessments", DT::dataTableOutput("outassessments")),
-                                                  tabPanel("Countries", DT::dataTableOutput("outocc")),
-                                                  tabPanel("Credits", DT::dataTableOutput("outcredits")),
-                                                  tabPanel("Habitats", DT::dataTableOutput("outhab")),
-                                                  tabPanel("Plant specific", DT::dataTableOutput("outgfinput")),
-                                                  tabPanel("Taxonomy", DT::dataTableOutput("outtax"))
-                    
-                                                  ),
+                                      actionButton("minmaxSIS", "Minimise/maximise SIS tables", style='padding:4px; font-size:80%'),
+                                      
+                                      br(),
+                                      conditionalPanel(
+                                        condition = "input.minmaxSIS % 2 == 0",
+                                        
+                                        tabsetPanel(type = "tabs",
+                                                    tabPanel("Point table", DT::dataTableOutput("pointstab")),
+                                                    tabPanel("Allfields", DT::dataTableOutput("outallf")),
+                                                    tabPanel("Assessments", DT::dataTableOutput("outassessments")),
+                                                    tabPanel("Countries", DT::dataTableOutput("outocc")),
+                                                    tabPanel("Credits", DT::dataTableOutput("outcredits")),
+                                                    tabPanel("Habitats", DT::dataTableOutput("outhab")),
+                                                    tabPanel("Plant specific", DT::dataTableOutput("outgfinput")),
+                                                    tabPanel("Taxonomy", DT::dataTableOutput("outtax"))
+                                                    
+                                        )
+                                      ),
+
                                       br(),
                                       #flexdashboard::gaugeOutput("plt1"),width=12,title="Gauge Graph",background ="green",
                                       br(),
