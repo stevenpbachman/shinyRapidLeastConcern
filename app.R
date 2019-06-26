@@ -40,6 +40,7 @@ library(stringr)
 library(shiny)
 library(rCAT)
 library(flexdashboard)
+library(shinydashboard)
 
 
 #### 2 - Source the functions---------------
@@ -202,19 +203,6 @@ ui <- fluidPage(
                                       ),
                                    
                                       
-                                      #actionButton("minmaxpowo", "Minimise/maximise"),
-                                      
-                                      # Output: Header + summary of distribution ----
-                                      #h6("GBIF search results:"),
-                                      # search results from GBIF
-                                      #conditionalPanel(
-                                      #  condition = "input.minmax.powo % 2 == 0",DT::dataTableOutput("powotab")
-                                      #),
-                                      
-                                      
-                                      # search results from POWO
-                                      #DT::dataTableOutput("powotab"),
-                                      
                                       br(),
                                       
                                       actionButton("minmaxmapstats", "Minimise/maximise map", style='padding:4px; font-size:80%'),
@@ -229,12 +217,22 @@ ui <- fluidPage(
                                         condition = "input.minmaxmapstats % 2 == 0",DT::dataTableOutput("singletab")
                                       ),
                                       
-                                      
-                                      #leaflet::leafletOutput("mymap", width = "100%", height = 400),
-                                      
-                                      # results 
-                                      #DT::dataTableOutput("singletab"),
-                                      
+                                      dashboardBody(
+                                        fluidRow(
+                                          
+                                          
+                                          box(flexdashboard::gaugeOutput("plt1"),width=3,background ="green" ),
+                                          
+                                          box(flexdashboard::gaugeOutput("plt2"),width=3,background ="green" ),
+                                          
+                                          box(flexdashboard::gaugeOutput("plt3"),width=3,background ="green" ),
+                                          
+                                          box(flexdashboard::gaugeOutput("plt4"),width=3,background ="green" )
+                                          
+                                          )
+                                           
+                                        ),
+                             
                                       br(),
                                       
                                       actionButton("minmaxSIS", "Minimise/maximise SIS tables", style='padding:4px; font-size:80%'),
@@ -257,7 +255,6 @@ ui <- fluidPage(
                                       ),
 
                                       br(),
-                                      #flexdashboard::gaugeOutput("plt1"),width=12,title="Gauge Graph",background ="green",
                                       br(),
                                       br(),
                                       br(),
@@ -349,14 +346,7 @@ ui <- fluidPage(
 server <- function(input, output, session) {
   
   
-# testing this out - use gauges to show results against LC thresholds
-# working, but screws up the layout
-# see bottom of single page UI - main   
-#output$plt1 <- flexdashboard::renderGauge({
-#    gauge(56, min = 0, max = 100, symbol = '%', label = paste("Test Label"),gaugeSectors(
-#      success = c(100, 6), warning = c(5,1), danger = c(0, 1), colors = c("#CC6699")
-#    ))
-#})
+
   
 ############  INPUTS ############
   
@@ -473,6 +463,55 @@ server <- function(input, output, session) {
   options = list(pageLength = 5))
   
 
+  
+  # testing this out - use gauges to show results against LC thresholds
+  # working, but screws up the layout
+  # see bottom of single page UI - main   
+  output$plt1 <- flexdashboard::renderGauge({
+    
+    stats_df = SingleStats()
+    TDWGnum = stats_df$TDWGCount
+    
+      gauge(TDWGnum, min = 0, max = 10, label = paste("TDWG count"),gaugeSectors(
+        success = c(6,10), danger = c(0,5)
+      ))
+      
+  })
+  
+  output$plt2 <- flexdashboard::renderGauge({
+    
+    stats_df = SingleStats()
+    EOOnum = stats_df$EOO
+    
+    gauge( EOOnum, min = 0, max = 50000, label = paste("EOO"),gaugeSectors(
+      success = c(30000,50000), danger = c(0,29999)
+    ))
+    
+  })
+  
+  output$plt3 <- flexdashboard::renderGauge({
+    
+    stats_df = SingleStats()
+    AOOnum = stats_df$AOO
+    
+    gauge(AOOnum, min = 0, max = 200, label = paste("AOO"),gaugeSectors(
+      success = c(100,200), danger = c(0,99)
+    ))
+    
+  })
+  
+  output$plt4 <- flexdashboard::renderGauge({
+    
+    stats_df = SingleStats()
+    RecordCount = stats_df$RecordCount
+    
+    gauge( RecordCount, min = 0, max = 150, label = paste("RecordCount"),gaugeSectors(
+      success = c(75,150), danger = c(0,74)
+    ))
+    
+  })
+  
+  
     ### 1 single - prepare download outputs
   
   # Show GBIF occurrence points
