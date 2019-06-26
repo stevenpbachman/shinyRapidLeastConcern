@@ -219,7 +219,6 @@ check.tdwg = function(ID){
   }
 
   return(results)
-}
 
 deduplicate_by <- function(.data, ...) {
   group_vars <- enquos(...)
@@ -227,7 +226,6 @@ deduplicate_by <- function(.data, ...) {
     group_by(!!! group_vars) %>%
     filter(row_number() == 1) %>%
     ungroup()
-}
 
 # 3.5 native range clip
 native.clip = function(points, TDWGpolys, powo){
