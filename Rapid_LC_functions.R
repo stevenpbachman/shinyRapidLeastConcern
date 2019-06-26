@@ -150,10 +150,10 @@ check.accepted.POWO = function(name_in) {
   full_url = utils::URLencode(full_url)
   
   # get raw json data
-  raw.data <- readLines(full_url, warn = "F", encoding = "UTF-8")
+  raw_data <- readLines(full_url, warn = "F", encoding = "UTF-8")
   
   # organise
-  rd = jsonlite::fromJSON(raw.data)
+  rd = fromJSON(raw_data)
   
   if (length(rd$results) > 0) {
 
@@ -190,42 +190,35 @@ batch.POWO = function(name_in) {
 
 # 3.4 get the TDWG native range from POWO
 check.tdwg = function(ID){
-  
-  #full_url = paste0("http://plantsoftheworld.online/api/2/taxon/urn:lsid:ipni.org:names:", ID, "?fields=distribution")
+  results = tibble(
+      LEVEL3_COD=NA_character_,
+      featureId=NA_character_,
+      tdwgLevel=NA_integer_,
+      establishment=NA_character_,
+      LEVEL3_NAM=NA_character_,
+      POWO_ID=NA_character_
+  )
+
   full_url = paste0("http://plantsoftheworld.online/api/2/taxon/urn:lsid:ipni.org:names:", ID, "?fields=distribution")
   
   # encode
   full_url = utils::URLencode(full_url)
   
   # get raw json data
-  raw.data <- readLines(full_url, warn = "F", encoding = "UTF-8")
+  raw_data = readLines(full_url, warn = "F", encoding = "UTF-8")
   
   # organise
-  rd = jsonlite::fromJSON(raw.data)
+  rd = fromJSON(raw_data)
   
-  rd = as.data.frame(rd$distribution$natives)
+  distribution = rd$distribution$natives
   
-  if (!nrow(rd)) {
-    rd = data.frame(
-      LEVEL3_COD = "NA",
-      featureId = "NA",
-      tdwgLevel = "NA",
-      establishment = "NA",
-      LEVEL3_NAM = "NA",
-      POWO_ID = ID,
-      TDWG_Name = "NA",
-      ID = "")
+  if (! is.null(distribution)) {
+    results = mutate(distribution, POWO_ID=ID)
+    results = rename(results, LEVEL3_NAM=name, LEVEL3_COD=tdwgCode)
+    results = mutate(results, LEVEL3_NAM=recode(LEVEL3_NAM, "á"="a"))
   }
-  
-  else{
-    rd["POWO_ID"] = ID
-    colnames(rd)[which(names(rd) == "name")] = "LEVEL3_NAM"
-    colnames(rd)[which(names(rd) == "tdwgCode")] = "LEVEL3_COD"
-    
-    #replace Panamá with Panama
-    rd$LEVEL3_NAM = gsub("Panamá", "Panama", rd$LEVEL3_NAM)
-    return(rd)
-  }
+
+  return(results)
 }
 
 # 3.5 native range clip
