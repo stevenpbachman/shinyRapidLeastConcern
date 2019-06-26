@@ -229,11 +229,17 @@ deduplicate_by <- function(.data, ...) {
     ungroup()
 }
 
+deduplicate_by <- function(.data, ...) {
+  group_vars <- enquos(...)
+  .data %>%
+    group_by(!!! group_vars) %>%
+    filter(row_number() == 1) %>%
+    ungroup()
+}
+
 # 3.5 native range clip
 native.clip = function(points, TDWGpolys, powo){
-
   # TODO: maybe replace/add option for raster solution if more points provided
-
   # prepare the point data as spatial
   points <- deduplicate_by(points, DEC_LONG, DEC_LAT)
   point_sf <- st_as_sf(points, 
