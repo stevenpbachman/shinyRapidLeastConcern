@@ -60,148 +60,77 @@ gbif.key = function (full_name) {
 
 # 3.2 fetch the points using key
 gbif.points = function(key) {
-  #gbifkey = result.table
-  #gbifkey = result.table[,3]
-  
+  res = tibble(
+    BasisOfRec = NA_character_,
+    BINOMIAL = NA_character_,
+    DEC_LONG = -999,
+    DEC_LAT = -999,
+    EVENT_YEAR = -999L,
+    CATALOG_NO = NA_character_,
+    SPATIALREF = "WGS84",
+    PRESENCE = "1",
+    ORIGIN = "1",
+    SEASONAL = "1",
+    DATA_SENS = "No",
+    SOURCE = NA_character_,
+    YEAR = -999L,
+    COMPILER = NA_character_,
+    CITATION = NA_character_,
+    recordedBy = NA_character_,
+    recordNumber = NA_character_,
+    issues = NA_character_,
+    datasetKey = NA_character_
+  )
+
   if (key == "") {
-    
-    res = data.frame(
-      basisOfRecord = as.character("NA"),
-      BINOMIAL = as.character("NA"),
-      DEC_LONG = as.numeric("-999"),
-      DEC_LAT = as.numeric("-999"),
-      EVENT_YEAR = as.integer("-999"),
-      CATALOG_NO = as.character("NA"),
-      SPATIALREF = "WGS84",
-      PRESENCE = "1",
-      ORIGIN = "1",
-      SEASONAL = "1",
-      DATA_SENS = "No",
-      SOURCE = as.character("NA"),
-      YEAR = as.integer("-999"),
-      COMPILER = as.character("NA"),
-      CITATION = as.character("NA"),
-      stringsAsFactors = FALSE
-    )
-  } else    {
-    
-    res = rgbif::occ_data(
-      taxonKey = key,
-      hasGeospatialIssue = FALSE,
-      hasCoordinate = TRUE,
-      #geometry = mygeom,
-      limit = 1000
-    )
-    
-    
-    res = res$data
-    res = as.data.frame(res)
-    
-    if (nrow(res) == 0) {
-      
-    } else {
-      
-      res$taxonKey = key
-      
-      if (!"recordNumber" %in% colnames(res)) {
-        res$recordNumber = NA
-        as.character(res$recordNumber)
-      }
-      if (!"decimalLongitude" %in% colnames(res)) {
-        res$decimalLongitude = NA
-        as.character(res$decimalLongitude)
-      }
-      if (!"decimalLatitude" %in% colnames(res)) {
-        res$decimalLatitude = NA
-        as.character(res$decimalLatitude)
-      }
-      if (!"year" %in% colnames(res)) {
-        res$year = NA
-        as.character(res$year)
-      }
-      if (!"datasetKey" %in% colnames(res)) {
-        res$datasetKey = NA
-      }
-      if (!"basisOfRecord" %in% colnames(res)) {
-        res$basisOfRecord = NA
-      }
-      if (!"catalogNumber" %in% colnames(res)) {
-        res$catalogNumber = NA
-      }
-      if (!"recordedBy" %in% colnames(res)) {
-        res$recordedBy = NA
-      }
-      if (!"issues" %in% colnames(res)) {
-        res$issues = NA
-      }
-      if (!"institutionCode" %in% colnames(res)) {
-        res$institutionCode = NA
-      }
-      if (!"country" %in% colnames(res)) {
-        res$country = NA
-      }
-      if (!"familyKey" %in% colnames(res)) {
-        res$familyKey = NA
-        as.character(res$familyKey)
-      }
-      if (!"scientificName" %in% colnames(res)) {
-        res$scientificName = NA
-      }
-      
-      res = subset(
-        res,
-        select = c(
-          'basisOfRecord',
-          'datasetKey',
-          #'taxonKey',
-          #'familyKey',
-          'scientificName',
-          'decimalLongitude',
-          'decimalLatitude',
-          'year',
-          'issues',
-          #'country',
-          'recordNumber',
-          'catalogNumber',
-          'recordedBy'
-          #'institutionCode'
-        )
-      )
-      
-      
-      
-      colnames(res)[which(names(res) == "decimalLatitude")] = "DEC_LAT"
-      colnames(res)[which(names(res) == "decimalLongitude")] = "DEC_LONG"
-      colnames(res)[which(names(res) == "scientificName")] = "BINOMIAL"
-      colnames(res)[which(names(res) == "year")] = "EVENT_YEAR"
-      colnames(res)[which(names(res) == "catalogNumber")] = "CATALOG_NO"
-      colnames(res)[which(names(res) == "basisOfRecord")] = "BasisOfRec"
-      
-      res$SPATIALREF = "WGS84"
-      res$PRESENCE = "1"
-      res$ORIGIN = "1"
-      res$SEASONAL = "1"
-      res$YEAR = substring(Sys.Date(), 1, 4)
-      res$DATA_SENS = "No"
-      res$SOURCE = paste0("https://www.gbif.org/dataset/", res$datasetKey, sep = "")
-      res$COMPILER = ""
-      res$CITATION = ""
-      
-      # reformat to iucn standard
-      res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "FOSSIL_SPECIMEN","FossilSpecimen" )
-      res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "HUMAN_OBSERVATION", "HumanObservation")
-      res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "LITERATURE", "")
-      res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "LIVING_SPECIMEN", "LivingSpecimen")
-      res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "MACHINE_OBSERVATION","MachineObservation")
-      res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "OBSERVATION","" )
-      res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "PRESERVED_SPECIMEN","PreservedSpecimen" )
-      res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "UNKNOWN","Unknown")
-      
-      # remove fossils? Literature and Unknown are not recognised in IUCN standards.
-    }
+    return(res)
   }
+  
+  gbif_results = occ_data(
+    taxonKey = key,
+    hasGeospatialIssue = FALSE,
+    hasCoordinate = TRUE,
+    limit = 1000
+  )
+  
+  gbif_points = gbif_results$data
+  
+  if (nrow(gbif_points) > 0) {
+    
+    gbif_points = rename(gbif_points,
+      BasisOfRec=basisOfRecord,
+      DEC_LAT=decimalLatitude,
+      DEC_LONG=decimalLongitude,
+      BINOMIAL=scientificName,
+      EVENT_YEAR=year,
+      CATALOG_NO=catalogNumber
+    )
+    
+    columns_to_add = setdiff(colnames(res), colnames(gbif_points))
+    default_data = as.list(res)
+    gbif_points = tibble::add_column(gbif_points, !!!default_data[columns_to_add])
+    
+    gbif_points$YEAR = substring(Sys.Date(), 1, 4)
+    gbif_points$SOURCE = paste0("https://www.gbif.org/dataset/", gbif_points$datasetKey, sep = "")
+    
+    # reformat to iucn standard
+    gbif_points = mutate(gbif_points,
+                          BasisOfRec=recode(BasisOfRec,
+                            "FOSSIL_SPECIMEN"="FossilSpecimen",
+                            "HUMAN_OBSERVATION"="HumanObservation",
+                            "LITERATURE"="",
+                            "LIVING_SPECIMEN"="LivingSpecimen",
+                            "MACHINE_OBSERVATION"="MachineObservation",
+                            "OBSERVATION"="",
+                            "PRESERVED_SPECIMEN"="PreservedSpecimen",
+                            "UNKNOWN"="Unknown",
+                          ))
+    
+    res = select(gbif_points, colnames(res))
+  }
+  
   return(res)
-} 
+}
 
 # 3.3 check name against POWO
 # takes binomial and checks against POWO (http://www.plantsoftheworldonline.org)
