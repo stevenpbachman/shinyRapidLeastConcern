@@ -221,60 +221,32 @@ check.tdwg = function(ID){
   return(results)
 }
 
+deduplicate_by <- function(.data, ...) {
+  group_vars <- enquos(...)
+  .data %>%
+    group_by(!!! group_vars) %>%
+    filter(row_number() == 1) %>%
+    ungroup()
+}
+
 # 3.5 native range clip
 native.clip = function(points, TDWGpolys, powo){
-  
+
   # prepare the point data as spatial
-  decimalLongitude = points$DEC_LONG
-  decimalLatitude = points$DEC_LAT
-  coords = cbind(decimalLongitude, decimalLatitude)
-  coords = base::data.matrix(coords)
-  coords = base::unique(coords)
-  sp = sp::SpatialPoints(coords)
-  
-  ## alternative vector solution
-  #proj4string(sp) <- proj4string(TDWGpolys)
-  #extracted = over(sp, TDWGpolys)
-  #extract.out = cbind(extracted, coords)
-  #clean_out = na.omit(extract.out)
-  ## change colnames 
-  #colnames(clean_out)[which(names(clean_out) == "decimalLongitude")] = "DEC_LONG"
-  #colnames(clean_out)[which(names(clean_out) == "decimalLatitude")] = "DEC_LAT"
-  ## select the subset you want 1.2.5.6
-  #tdwg.merge.out = clean_out[c("LEVEL3_NAM","LEVEL3_COD","DEC_LONG", "DEC_LAT")]
-  
-  ##powo = "314824-1"
-  #point.clean.bind = merge(points, tdwg.merge.out, by = c("DEC_LONG", "DEC_LAT"), all = TRUE)
-  #sptdwg = check.tdwg(powo)
-  #native_points = merge(point.clean.bind, sptdwg)
-  #native_points
-  
-  
-  # extract values from TDWG raster
-  extract.out = raster::extract(raster.tdwg, sp, df = TRUE)
-  clean_out = na.omit(extract.out)
-  
-  if (nrow(clean_out) == 0) {
-    native_points = data.frame(blankdf = character())
-  }
-  
-  else {  
-    extract.out = cbind(extract.out, coords)
-    colnames(extract.out)[which(names(extract.out) == "tdwg3")] = "VALUE"
-    merge = merge(extract.out, tdwg_raster, by = "VALUE", all.x = TRUE)
-    tdwg.merge.out = subset(merge, LEVEL3_NAM != "NA") # this gets rid of TDWG areas that had no points in
-    # change colnames 
-    colnames(tdwg.merge.out)[which(names(tdwg.merge.out) == "decimalLongitude")] = "DEC_LONG"
-    colnames(tdwg.merge.out)[which(names(tdwg.merge.out) == "decimalLatitude")] = "DEC_LAT"
-    point.clean.bind = merge(points, tdwg.merge.out, by = c("DEC_LONG", "DEC_LAT"), all = TRUE)
-    
-    # now I have points with TDWG regions added - need to merge with TDWG native range
-    sptdwg = check.tdwg(powo)
-    sptdwg = merge(TDWGpolys, sptdwg)
-    sptdwg = within(sptdwg, rm("geometry"))
-    native_points = merge(point.clean.bind, sptdwg)
-    native_points
-  }
+  points <- deduplicate_by(points, DEC_LONG, DEC_LAT)
+  point_sf <- st_as_sf(points, 
+                       coords=c("DEC_LONG", "DEC_LAT"),
+                       crs=st_crs(TDWGpolys), 
+                       remove=FALSE)
+  # get shapes of native range
+  native_distribution <- check.tdwg(powo)
+  native_tdwg <- filter(TDWGpolys, LEVEL3_COD %in% native_distribution$LEVEL3_COD)
+  # clip points to native range with a spatial join
+  native_points <- st_join(point_sf, native_tdwg)
+  native_points <- filter(native_points, ! is.na(LEVEL3_COD))
+  # convert back to normal data frame from sf
+  native_points <- as_tibble(native_points)
+  native_points <- select(native_points, -geometry)
 }
 
 # 3.6 SIS files allfields.csv
