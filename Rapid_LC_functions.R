@@ -852,7 +852,7 @@ batch_countries = function(species){
 # #LC.references = function(LC.results){
 #   #powoid = trees_7079[["ID"]]
 #   #powoid = powoid[1:10]
-#   powoid = LC.results[["POWO_ID"]]
+#   powoid = LC.results[["POWO_ID"]]s
 #   
 #   type = c("electronic source","electronic source","electronic source" )
 #   author = c("Board of Trustees, RBG Kew","Moat, J.", "Chamberlain, S")
