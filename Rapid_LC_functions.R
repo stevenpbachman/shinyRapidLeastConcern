@@ -108,7 +108,7 @@ gbif.points = function(key) {
     
     columns_to_add = setdiff(colnames(res), colnames(gbif_points))
     default_data = as.list(res)
-    gbif_points = tibble::add_column(gbif_points, !!!default_data[columns_to_add])
+    gbif_points = tibble::add_column(gbif_points, !!! default_data[columns_to_add])
     
     gbif_points$YEAR = substring(Sys.Date(), 1, 4)
     gbif_points$SOURCE = paste0("https://www.gbif.org/dataset/", gbif_points$datasetKey, sep = "")
@@ -183,6 +183,7 @@ batch.POWO = function(name_in) {
   powo_results = rename(powo_results, name_in=name)
 
   powo_results = unite(powo_results, fullname, name_in, author, sep=" ", remove=FALSE)
+  # might error if all different names returned
   powo_results = powo_results[1,]
   
   return(powo_results)
@@ -238,6 +239,8 @@ deduplicate_by <- function(.data, ...) {
 # 3.5 native range clip
 native.clip = function(points, TDWGpolys, powo){
 
+  # TODO: maybe replace/add option for raster solution if more points provided
+
   # prepare the point data as spatial
   points <- deduplicate_by(points, DEC_LONG, DEC_LAT)
   point_sf <- st_as_sf(points, 
@@ -270,15 +273,17 @@ allfields = function(species, ID){
 # 3.7 SIS files assessments.csv
 assessments = function(species, ID){
   
-  sysdate = base::Sys.Date()
-  day = base::substr(sysdate, 9, 10)
-  month = base::substr(sysdate, 6, 7)
-  year = base::substr(sysdate, 1, 4)
+  rationale_str = paste("This species has a very wide distribution,", 
+                        "large population,", 
+                        "is not currently experiencing any major threats", 
+                        "and no significant future threats have been identified.", 
+                        "This species is therefore assessed as Least Concern.")
+  
   as = data.frame(
     internal_taxon_id = ID,	
-    RedListRationale.value = "This species has a very wide distribution, large population, is not currently experiencing any major threats and no significant future threats have been identified. This species is therefore assessed as Least Concern.",	
+    RedListRationale.value = rationale_str,	
     mapstatus.status = "Done",	
-    RedListAssessmentDate.value = paste0(day, "/", month, "/", year),	
+    RedListAssessmentDate.value = format(Sys.Date(), "%d/%m/%Y"),	
     RedListCriteria.critVersion	= "3.1",
     RedListCriteria.manualCategory	= "LC",
     PopulationTrend.value	= "Stable",
@@ -295,16 +300,13 @@ assessments = function(species, ID){
 
 # 3.8 SIS files countries.csv
 countries = function(ID){
-  
-  internal_taxon_id = ID
-  range = check.tdwg(internal_taxon_id) 
+
+  range = check.tdwg(ID) 
   # merge with IUCN country file
-  colnames(TDWG_to_IUCN_version3_UTF)[which(names(TDWG_to_IUCN_version3_UTF) == "Level.3.code")] =
-    "LEVEL3_COD"
-  merged_range = merge(range, TDWG_to_IUCN_version3_UTF, by = "LEVEL3_COD")
+  merged_range = left_join(range, TDWG_to_IUCN_version3_UTF, by =c("LEVEL3_COD"="Level.3.code"))
   
   # now get rid of the duplicates to get a clean list
-  merged_range = merged_range[!duplicated(merged_range$countryoccurrence.countryoccurrencesubfield.countryoccurrencename), ]
+  merged_range = deduplicate_by(merged_range, countryoccurrence.countryoccurrencesubfield.countryoccurrencename)
   
   country_tab = merged_range[c(6,10,9)]
   country_tab$CountryOccurrence.CountryOccurrenceSubfield.presence = "Extant"
@@ -319,8 +321,8 @@ credits = function(name,email,affiliation,species, ID) {
   credits = data.frame(
     internal_taxon_id = ID,
     credit_type = "Assessor",
-    firstName = stringr::word(name,1),
-    lastName = stringr::word(name,2),
+    firstName = word(name,1),
+    lastName = word(name,2),
     initials = "",
     Order = "1",
     email = email,
@@ -333,11 +335,15 @@ credits = function(name,email,affiliation,species, ID) {
 # 3.10 SIS files - habitats.csv
 habitats = function(habitatinput, species, ID) {
   
-  hab = data.frame(description = habitatinput)
-  hab = merge(hab,habitatlist, by = "description")
-  hab$internal_taxon_id = 	ID
-  colnames(hab)[which(names(hab) == "description")] = "GeneralHabitats.GeneralHabitatsSubfield.GeneralHabitatsName"
-  colnames(hab)[which(names(hab) == "code")] = "GeneralHabitats.GeneralHabitatsSubfield.GeneralHabitatsLookup"
+  hab = data.frame(description=habitatinput)
+  
+  hab = merge(hab, habitatlist, by="description")
+  
+  hab$internal_taxon_id = ID
+  hab = rename(hab, 
+               GeneralHabitats.GeneralHabitatsSubfield.GeneralHabitatsName=description,
+               GeneralHabitats.GeneralHabitatsSubfield.GeneralHabitatsLookup=code)
+  
   hab$GeneralHabitats.GeneralHabitatsSubfield.suitability = "Suitable"
   hab$GeneralHabitats.GeneralHabitatsSubfield.majorImportance	= ""
   hab$GeneralHabitats.GeneralHabitatsSubfield.season = ""	
@@ -347,12 +353,14 @@ habitats = function(habitatinput, species, ID) {
 # 3.11 SIS files - plantspecific.csv
 plantspecific = function(gfinput, species, ID) {
   
-  gf = data.frame(description = gfinput)
-  gf = merge(gf,plantgflist, by = "description")
-  gf$internal_taxon_id = 	ID
-  colnames(gf)[which(names(gf) == "description")] = "PlantGrowthForms.PlantGrowthFormsSubfield.PlantGrowthFormsName"
-  colnames(gf)[which(names(gf) == "code")] = "PlantGrowthForms.PlantGrowthFormsSubfield.PlantGrowthFormsLookup"
-  gf
+  gf = data.frame(description=gfinput)
+  gf = merge(gf, plantgflist, by="description")
+  gf$internal_taxon_id = ID
+  
+  gf = rename(gf,
+              PlantGrowthForms.PlantGrowthFormsSubfield.PlantGrowthFormsName=description,
+              PlantGrowthForms.PlantGrowthFormsSubfield.PlantGrowthFormsLookup=code)
+  
   return(gf)
 }
 
@@ -367,71 +375,62 @@ plantspecific = function(gfinput, species, ID) {
 taxonomy = function(key, species, ID){
   
   #check = gbif.key(species)
-  nameinfo = rgbif::name_usage(key)
+  nameinfo = name_usage(key)
   powo = check.accepted.POWO(species)
-  powo2 = subset(powo, subset = powo$IPNI_ID == ID)
+  powo = filter(powo, IPNI_ID == ID)
   
-  ID = ID
   tax = data.frame(
     internal_taxon_id = ID,	
-    #kingdom	= "PLANTAE",
-    #phylum = "",
-    #classname = "",
-    #ordername = "",
-    family =  nameinfo$data$family,
+    family = nameinfo$data$family,
     genus = nameinfo$data$genus,
     species = word(nameinfo$data$species,2),  
-    taxonomicAuthority = powo2$author)
+    taxonomicAuthority = powo$author)
   
   #now merge with iucn taxonomy to get higher tax
   #colnames(taxonomy_iucn)[which(names(taxonomy_iucn) == "fam")] = "family"
-  taxmerged = merge(tax, taxonomy_iucn, by = "family")
-  taxmerged = taxmerged[c(2,6:8,1,3:5)]
+  taxmerged = merge(tax, taxonomy_iucn, by="family")
+  taxmerged = taxmerged[c(2, 6:8, 1, 3:5)]
   
   return(taxmerged)
 }
 
 # 3.13 save all SIS files
 all_SIS = function(species, powo, name, email, affiliation, habitat, growthform, key){
+  zip_folder = here("data/singlezip")
   
-  do.call(file.remove, list(list.files(here("data/singlezip/"), full.names = TRUE)))
+  if (file.exists(zip_folder)) {
+    unlink(zip_folder, recursive=TRUE)
+  }
   
+  dir.create(zip_folder)
   
-  allfpath = here("data/singlezip/allfields.csv")
   allfields = allfields(species, powo)
-  write.csv(allfields, allfpath, row.names = FALSE)
+  write_csv(allfields, here(zip_folder, "allfields.csv"))
   
-  assessmentspath = here("data/singlezip/assessments.csv")
   assessmentstable = assessments(species, powo)
-  write.csv(assessmentstable, assessmentspath, row.names = FALSE)
+  write_csv(assessmentstable, here(zip_folder, "assessments.csv"))
   
-  occspath = here("data/singlezip/countries.csv")
   occstable = countries(powo)
-  write.csv(occstable, occspath, row.names = FALSE)
+  write_csv(occstable, here(zip_folder, "countries.csv"))
   
-  credpath = here("data/singlezip/credits.csv")
   credits = credits(name, email, affiliation, species, powo)
-  write.csv(credits, credpath, row.names = FALSE)
+  write_csv(credits, here(zip_folder, "credits.csv"))
   
-  habitatpath = here("data/singlezip/habitats.csv")
   hab = habitats(habitat, species, powo)
-  write.csv(hab, habitatpath, row.names = FALSE)
+  write_csv(hab, here(zip_folder, "habitats.csv"))
   
-  plantspath = here("data/singlezip/plantspecific.csv")
   plantspecific = plantspecific(growthform, species, powo)
-  write.csv(plantspecific, plantspath, row.names = FALSE)
+  write_csv(plantspecific, here(zip_folder, "plantspecific.csv"))
   
-  taxpath = here("data/singlezip/taxonomy.csv")
-  ##taxtable =  taxinput()
   taxtable = taxonomy(key, species, powo)
-  write.csv(taxtable, taxpath, row.names = FALSE)
+  write_csv(taxtable, here(zip_folder, "taxonomy.csv"))
   
 }
 
 # 3.14 EOO and AOO
 eoo.aoo = function(native) {
   
-  mypointsll = data.frame(lat = native$DEC_LAT, long = native$DEC_LONG)
+  mypointsll = data.frame(lat=native$DEC_LAT, long=native$DEC_LONG)
   centreofpoints <- trueCOGll(mypointsll)
   mypointsxy <- simProjWiz(mypointsll, centreofpoints)
   
@@ -441,12 +440,11 @@ eoo.aoo = function(native) {
   EOOkm2abs = abs(EOOkm2)
   rec_count = nrow(mypointsxy)
   cellsizem <- 10000
-  AOOnocells <- AOOsimp (mypointsxy, cellsizem)
-  AOOkm2 <- AOOnocells * (cellsizem/1000)^2
+  AOOnocells <- AOOsimp(mypointsxy, cellsizem)
+  AOOkm2 <- AOOnocells * (cellsizem / 1000)^2
   
   eoo.aoo.res = data.frame(
-    EOO = round(EOOkm2abs,0),
-    #AOO = AOOnocells,
+    EOO = round(EOOkm2abs, 0),
     AOO = AOOkm2,
     RecordCount = rec_count)
   
