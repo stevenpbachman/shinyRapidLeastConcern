@@ -167,7 +167,7 @@ ui <- fluidPage(
                                       #helpText("Download spatial point file:"),
                                       
                                       tags$blockquote("
-                                      Check the generated map and table data. If correct, then download the point file and SIS connect files"),
+                                      Check the map and statistics. As a guideline, gauges in green indicate high probability of being Least Concern, red indicates possibly threatened. If you think you have an LC specie, download the point file and SIS connect files"),
                                       
                                       tags$h5("5. Download data:"),
                                       
@@ -186,7 +186,7 @@ ui <- fluidPage(
                                     mainPanel(
                                       
                                       # Output: Header + summary of distribution ----
-                                      actionButton("minmaxgbif", "Minimise/maximise search results", style='padding:4px; font-size:80%'),
+                                      actionButton("minmaxgbif", "Hide/Show search results", style='padding:4px; font-size:80%'),
                                       
                                       br(),
                                       
@@ -205,17 +205,24 @@ ui <- fluidPage(
                                       
                                       br(),
                                       
-                                      actionButton("minmaxmapstats", "Minimise/maximise map", style='padding:4px; font-size:80%'),
+                                      actionButton("minmaxmap", "Hide/Show map", style='padding:4px; font-size:80%'),
                                       
                                       h5("Distribution map: "),
                                       
                                       conditionalPanel(
-                                        condition = "input.minmaxmapstats % 2 == 0",leaflet::leafletOutput("mymap", width = "100%", height = 400)
+                                        condition = "input.minmaxmap % 2 == 0",leaflet::leafletOutput("mymap", width = "100%", height = 400)
                                       ),
                                       
+                                      br(),
+                                      
+                                      actionButton("minmaxstats", "Hide/Show statistics", style='padding:4px; font-size:80%'),
+                                      h5("Statistics: "),
                                       conditionalPanel(
-                                        condition = "input.minmaxmapstats % 2 == 0",DT::dataTableOutput("singletab")
+                                        condition = "input.minmaxstats % 2 == 0",DT::dataTableOutput("singletab")
                                       ),
+                                      
+                                      tags$blockquote("
+                                      Gauges in green indicate high probability of being Least Concern, red indicates possibly threatened."),
                                       
                                       dashboardBody(
                                         fluidRow(
@@ -233,9 +240,9 @@ ui <- fluidPage(
                                            
                                         ),
                              
-                                      br(),
+
                                       
-                                      actionButton("minmaxSIS", "Minimise/maximise SIS tables", style='padding:4px; font-size:80%'),
+                                      actionButton("minmaxSIS", "Hide/Show SIS tables", style='padding:4px; font-size:80%'),
                                       
                                       br(),
                                       conditionalPanel(
@@ -464,21 +471,8 @@ server <- function(input, output, session) {
   
 
   
-  # testing this out - use gauges to show results against LC thresholds
-  # working, but screws up the layout
-  # see bottom of single page UI - main   
+  # Use gauges to show results against LC thresholds
   output$plt1 <- flexdashboard::renderGauge({
-    
-    stats_df = SingleStats()
-    TDWGnum = stats_df$TDWGCount
-    
-      gauge(TDWGnum, min = 0, max = 10, label = paste("TDWG count"),gaugeSectors(
-        success = c(6,10), danger = c(0,5)
-      ))
-      
-  })
-  
-  output$plt2 <- flexdashboard::renderGauge({
     
     stats_df = SingleStats()
     EOOnum = stats_df$EOO
@@ -489,18 +483,18 @@ server <- function(input, output, session) {
     
   })
   
-  output$plt3 <- flexdashboard::renderGauge({
+  output$plt2 <- flexdashboard::renderGauge({
     
     stats_df = SingleStats()
     AOOnum = stats_df$AOO
     
-    gauge(AOOnum, min = 0, max = 200, label = paste("AOO"),gaugeSectors(
-      success = c(100,200), danger = c(0,99)
+    gauge(AOOnum, min = 0, max = 15000, label = paste("AOO"),gaugeSectors(
+      success = c(10000,15000), danger = c(0,9999)
     ))
     
   })
   
-  output$plt4 <- flexdashboard::renderGauge({
+  output$plt3 <- flexdashboard::renderGauge({
     
     stats_df = SingleStats()
     RecordCount = stats_df$RecordCount
@@ -511,8 +505,18 @@ server <- function(input, output, session) {
     
   })
   
+  output$plt4 <- flexdashboard::renderGauge({
+    
+    stats_df = SingleStats()
+    TDWGnum = stats_df$TDWGCount
+    
+      gauge(TDWGnum, min = 0, max = 10, label = paste("TDWG count"),gaugeSectors(
+        success = c(6,10), danger = c(0,5)
+      ))
+      
+  })
   
-    ### 1 single - prepare download outputs
+  ### 1 single - prepare download outputs
   
   # Show GBIF occurrence points
   output$pointstab <- DT::renderDataTable({
