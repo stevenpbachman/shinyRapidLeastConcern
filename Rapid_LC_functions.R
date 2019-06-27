@@ -108,6 +108,7 @@ gbif.points = function(key) {
     
     columns_to_add = setdiff(colnames(res), colnames(gbif_points))
     default_data = as.list(res)
+
     gbif_points = tibble::add_column(gbif_points, !!! default_data[columns_to_add])
     
     gbif_points$YEAR = substring(Sys.Date(), 1, 4)
@@ -183,6 +184,7 @@ batch.POWO = function(name_in) {
   powo_results = rename(powo_results, name_in=name)
 
   powo_results = unite(powo_results, fullname, name_in, author, sep=" ", remove=FALSE)
+
   # might error if all different names returned
   powo_results = powo_results[1,]
   
@@ -210,9 +212,9 @@ check.tdwg = function(ID){
   
   # organise
   rd = fromJSON(raw_data)
-  
+
   distribution = rd$distribution$natives
-  
+
   if (! is.null(distribution)) {
     results = mutate(distribution, POWO_ID=ID)
     results = rename(results, LEVEL3_NAM=name, LEVEL3_COD=tdwgCode)
