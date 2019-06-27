@@ -350,11 +350,11 @@ ui <- fluidPage(
 
 ### 4 - Server---------------
 server <- function(input, output, session) {
-  
-  
 
-  
 ############  INPUTS ############
+  
+  values <- reactiveValues(points=NULL,
+                           native_range=NULL)
   
   ### Home page navigation
   
@@ -375,27 +375,21 @@ server <- function(input, output, session) {
   
   ### 1 Single -  prepare map input
   
-  mapInput <- eventReactive(input$getPoints, {
+  observeEvent(input$getPoints, {
     withProgress(message = 'Querying GBIF',
                  value = 2, {
-                   points = gbif.points(input$key)
+                   gbif_results = gbif.points(input$key)
                  })
-    points
-    #points$COMPILER = paste0(input$name)
-    ##, ", ", substr(input$firstname, 1, 1),".", input$initials, sep = "")
-    #points$CITATION = paste0(input$affiliation, sep = "")
-    points = within(points, rm("issues", "datasetKey", "recordNumber", "recordedBy"))
-    points
     
-    if (input$native == TRUE) {
-      powo = input$powo
-      points = native.clip(points, TDWGpolys, powo)
-      
-    } else {
-      points
+    if (input$powo != "") {
+      powo_results <- check.tdwg(input$powo)
+      values$native_range <- powo_results
+      gbif_results <- find.native(gbif_results, values$native_range, TDWGpolys)
     }
     
     
+    
+    values$points <- gbif_results
   })
   
   ### 1 Single - prepare name search results output
@@ -422,24 +416,38 @@ server <- function(input, output, session) {
 #######################################################
   
   ### 1. Single - map render
-  
   # Output map
   output$mymap <- renderLeaflet({
-    df <- mapInput()
-    tdwg.dist = check.tdwg(input$powo)
-    sptdwg = merge(TDWGpolys, tdwg.dist)
+    if (is.null(values$points)) {
+      return(NULL)
+    }
+
+    df <- values$points
+    if (input$native & ! is.null(values$native_range)) {
+      df <- filter(df, ! is.na(native_range))
+    }
+    
+    sptdwg = merge(TDWGpolys, values$native_range)
     
     leaflet(data = df) %>%
       addMapPane("points", zIndex = 420) %>%
       addMapPane("poly", zIndex = 410) %>%
-      addCircleMarkers(group = "Points", lng = ~DEC_LONG,
-                       lat = ~DEC_LAT, radius = 4, color = "green", popup = paste("Collector:", df$recordedBy, "<br>",
-                                                                                  "Number:", df$recordNumber, "<br>",
-                                                                                  "Year:", df$EVENT_YEAR, "<br>",
-                                                                                  "Catalogue No.:", df$CATALOG_NO),
+      addCircleMarkers(lng = ~DEC_LONG,
+                       lat = ~DEC_LAT, 
+                       radius = 4, 
+                       color = "green", 
+                       popup = ~paste("Collector:", recordedBy, "<br>",
+                                     "Number:", recordNumber, "<br>",
+                                     "Year:", EVENT_YEAR, "<br>",
+                                     "Catalogue No.:", CATALOG_NO),
                        options = pathOptions(pane = "points")) %>%
       # maybe add an IF here to control whether native range is mapped
-      addPolygons(group = "Native range", data=sptdwg, color = "red", weight = 1, fillColor = "red", fillOpacity = 0.2, options = pathOptions(pane = "poly")) %>%
+      addPolygons(data=sptdwg, 
+                  color = "red", 
+                  weight = 1, 
+                  fillColor = "red", 
+                  fillOpacity = 0.2, 
+                  options = pathOptions(pane = "poly")) %>%
       addProviderTiles(providers$OpenStreetMap,
                        options = providerTileOptions(noWrap = TRUE)) %>%
     # Layers control
@@ -540,8 +548,7 @@ server <- function(input, output, session) {
   # Show GBIF occurrence points
   output$pointstab <- DT::renderDataTable({
     req(input$speciesinput)
-    df = mapInput()
-    df
+    values$points
   }, 
   options = list(pageLength = 5))
   

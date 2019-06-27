@@ -221,12 +221,6 @@ check.tdwg = function(ID){
 
   return(results)
 
-deduplicate_by <- function(.data, ...) {
-  group_vars <- enquos(...)
-  .data %>%
-    group_by(!!! group_vars) %>%
-    filter(row_number() == 1) %>%
-    ungroup()
 }
 
 deduplicate_by <- function(.data, ...) {
@@ -238,20 +232,20 @@ deduplicate_by <- function(.data, ...) {
 }
 
 # 3.5 native range clip
-native.clip = function(points, TDWGpolys, powo){
+
+find.native = function(points, native_range, TDWGpolys){
   # TODO: maybe replace/add option for raster solution if more points provided
   # prepare the point data as spatial
-  points <- deduplicate_by(points, DEC_LONG, DEC_LAT)
   point_sf <- st_as_sf(points, 
                        coords=c("DEC_LONG", "DEC_LAT"),
                        crs=st_crs(TDWGpolys), 
                        remove=FALSE)
   # get shapes of native range
-  native_distribution <- check.tdwg(powo)
-  native_tdwg <- filter(TDWGpolys, LEVEL3_COD %in% native_distribution$LEVEL3_COD)
+  native_tdwg <- filter(TDWGpolys, LEVEL3_COD %in% native_range$LEVEL3_COD)
+  native_tdwg <- select(native_tdwg, LEVEL3_COD)
   # clip points to native range with a spatial join
   native_points <- st_join(point_sf, native_tdwg)
-  native_points <- filter(native_points, ! is.na(LEVEL3_COD))
+  native_points <- rename(native_points, native_range=LEVEL3_COD)
   # convert back to normal data frame from sf
   native_points <- as_tibble(native_points)
   native_points <- select(native_points, -geometry)
