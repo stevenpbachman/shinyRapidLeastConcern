@@ -435,18 +435,38 @@ server <- function(input, output, session) {
     leaflet(data = df) %>%
       addMapPane("points", zIndex = 420) %>%
       addMapPane("poly", zIndex = 410) %>%
-      addCircleMarkers(lng = ~DEC_LONG,
+      addCircleMarkers(group = "Points", lng = ~DEC_LONG,
                        lat = ~DEC_LAT, radius = 4, color = "green", popup = paste("Collector:", df$recordedBy, "<br>",
                                                                                   "Number:", df$recordNumber, "<br>",
                                                                                   "Year:", df$EVENT_YEAR, "<br>",
                                                                                   "Catalogue No.:", df$CATALOG_NO),
                        options = pathOptions(pane = "points")) %>%
       # maybe add an IF here to control whether native range is mapped
-      addPolygons(data=sptdwg, color = "red", weight = 1, fillColor = "red", fillOpacity = 0.2, options = pathOptions(pane = "poly")) %>%
+      addPolygons(group = "Native range", data=sptdwg, color = "red", weight = 1, fillColor = "red", fillOpacity = 0.2, options = pathOptions(pane = "poly")) %>%
       addProviderTiles(providers$OpenStreetMap,
-                       options = providerTileOptions(noWrap = TRUE))
-    
+                       options = providerTileOptions(noWrap = TRUE)) %>%
+    # Layers control
+    addLayersControl(
+      #baseGroups = c("points", "poly"),
+      overlayGroups = c("Points", "Native range"),
+      options = layersControlOptions(collapsed = FALSE)
+    )
+      
   })
+  
+  observeEvent(input$mymap_click, {
+    ClickVar<-input$mymap_click
+    
+    proxy = leafletProxy("mymap")
+    
+    proxy %>%
+    #clearGroup("NewPoints") %>%
+    #clearMarkers(layerId=input$mymap_click$id) %>%
+    addCircleMarkers(lng=ClickVar$lng, lat=ClickVar$lat, radius = 4, color = "green", group = "NewPoints")
+  })
+  
+
+  
   
   #### 1 Single - generate statistics - EOO, AOO etc. using LC_comb function
   SingleStats <- eventReactive(input$getSingleStats, {
