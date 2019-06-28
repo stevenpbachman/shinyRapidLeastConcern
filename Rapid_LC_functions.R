@@ -466,132 +466,33 @@ eoo.aoo = function(native) {
 ###############
 
 # 3.15 combine functions to get LC results - use apply on this
-LC_comb = function(full_name, ID) {
+calculate_statistics = function(name, ipni_key, points) {
   # get the gbif key or bail out if there is no match
-  sp_key = gbif.key(full_name)
+  statistics <- tibble(
+    EOO=NA_real_,
+    AOO=NA_real_,
+    RecordCount=NA_integer_,
+    TDWGCount=NA_integer_,
+    POWO_ID=ipni_key,
+    full_name=name,
+    Warning=NA_character_
+  )
   
-  if (sp_key$usageKey[1] == "NA") {
-    Results = data.frame(
-      EOO = NA,
-      AOO = NA,
-      RecordCount = NA,
-      TDWGCount = NA,
-      POWO_ID = ID,
-      full_name = full_name,
-      Warning = "No name match in GBIF"
-      
-    )
-  }
-  
-  #################
-  # add in this section when GBIF thinks the species is not accepted.
-  else {
-    
-    search.df = c(
-      "PROPARTE_SYNONYM",
-      "DOUBTFUL",
-      "HETEROTYPIC_SYNONYM",
-      "HOMOTYPIC_SYNONYM",
-      "MISAPPLIED",
-      "SYNONYM"
-    )
+  points <- filter(points, ! is.na(native_range))
 
-    if(sp_key$status[1] %in%  search.df){
-      
-      Results = data.frame(
-        EOO = NA,
-        AOO = NA,
-        RecordCount = NA,
-        TDWGCount = NA,
-        POWO_ID = ID,
-        full_name = full_name,
-        Warning = "Best name match against GBIF is not treated by GBIF as accepted")
-      
-    }
+  if (nrow(points) == 0) {
+    statistics$Warning = "No GBIF points in native range"
+  }
+
+  range_measures <- eoo.aoo(points)
+
+  statistics <- mutate(statistics, 
+                       RecordCount=nrow(points),
+                       TDWGCount=length(unique(points$native_range)),
+                       EOO=range_measures$EOO,
+                       AOO=range_measures$AOO)
   
-  
-  #############
-  
-  else {
-    sp_key = sp_key[1, 1]
-    
-    # get the points using the key
-    points = gbif.points(sp_key$usageKey)
-    
-    # count georeferenced occurrences
-    points_count = nrow(points)
-    
-    # check if there are no gbif points
-    if (nrow(points) == 0) {
-      Results = data.frame(
-        EOO = NA,
-        AOO = NA,
-        RecordCount = NA,
-        TDWGCount = NA,
-        POWO_ID = ID,
-        full_name = full_name,
-        Warning = "No GBIF points"
-        
-      )
-    }
-    
-    else {
-      # get the native range
-      native = check.tdwg(ID)
-      
-      if (native$tdwgLevel[1] == "NA") {
-        Results = data.frame(
-          EOO = NA,
-          AOO = NA,
-          RecordCount = NA,
-          TDWGCount = NA,
-          POWO_ID = ID,
-          full_name = full_name,
-          Warning = "No TDWG distribution data"
-        )
-        
-      }
-      
-      else {
-        # clip points to native range
-        native_clipped = native.clip(points, TDWGpolys, ID)
-        
-        str(native_clipped)
-        
-        # nrow(native_clipped
-        if (length(native_clipped) < 1 | nrow(native_clipped) == 0) {
-          Results = data.frame(
-            EOO = NA,
-            AOO = NA,
-            RecordCount = NA,
-            TDWGCount = NA,
-            POWO_ID = ID,
-            full_name = full_name,
-            Warning = "No GBIF points in native range"
-            
-          )
-        }
-        
-        else {
-          # get EOO and AOO
-          EOO_AOO = eoo.aoo(native_clipped)
-          
-          # pull the results together
-          Results = data.frame(
-            EOO = EOO_AOO$EOO,
-            AOO = EOO_AOO$AOO,
-            RecordCount = EOO_AOO$RecordCount,
-            TDWGCount = nrow(native),
-            POWO_ID = ID,
-            full_name = full_name,
-            Warning = ""
-          )
-          return(Results)
-        }
-      }
-    }
-  } 
- }
+  return(statistics)
 }
 
 # 3.16 combine functions to get LC results - use apply on this
