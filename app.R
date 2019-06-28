@@ -352,7 +352,9 @@ server <- function(input, output, session) {
 ############  INPUTS ############
   
   values <- reactiveValues(points=NULL,
-                           native_range=NULL)
+                           native_range=NULL,
+                           statistics=NULL,
+                           powo_results=NULL)
   
   ### Home page navigation
   
@@ -384,9 +386,7 @@ server <- function(input, output, session) {
       values$native_range <- powo_results
       gbif_results <- find.native(gbif_results, values$native_range, TDWGpolys)
     }
-    
-    
-    
+
     values$points <- gbif_results
   })
   
@@ -406,7 +406,8 @@ server <- function(input, output, session) {
   output$powotab <- DT::renderDataTable({
     req(input$speciesinput)
     powosp = check.accepted.POWO(input$speciesinput)
-    
+    values$powo_results <- powosp
+    powosp
   },
   options = list(pageLength = 5))
   
@@ -452,46 +453,35 @@ server <- function(input, output, session) {
   })
   
   #### 1 Single - generate statistics - EOO, AOO etc. using LC_comb function
-  SingleStats <- eventReactive(input$getSingleStats, {
-    #species = batchInput()
-    
-    # get the summary table first - 
-    single_powo = batch.POWO(input$speciesinput)
-    
+
+  observeEvent(input$getSingleStats, {
+    powo_info <- filter(values$powo_results, IPNI_ID == input$powo)
+    print(powo_info)
     withProgress(message = 'Getting there...',
                  value = 2, {
-                   single = LC_comb(single_powo$fullname, single_powo$IPNI_ID)
+                   values$statistics = calculate_statistics(powo_info$name, powo_info$IPNI_ID, values$points)
                  })
-    df = single
-    df
   })
-  
+
   # output stats table 
   output$singletab <- DT::renderDataTable({
     req(input$speciesinput)
-    df = SingleStats()
-    df
+    values$statistics
   }, 
   options = list(pageLength = 5))
-  
 
-  
   # Use gauges to show results against LC thresholds
   output$plt1 <- flexdashboard::renderGauge({
-    
-    stats_df = SingleStats()
-    EOOnum = stats_df$EOO
+    EOOnum = values$statistics$EOO
     
     gauge( EOOnum, min = 0, max = 50000, label = paste("EOO"),gaugeSectors(
       success = c(30000,50000), danger = c(0,29999)
     ))
-    
   })
   
   output$plt2 <- flexdashboard::renderGauge({
-    
-    stats_df = SingleStats()
-    AOOnum = stats_df$AOO
+ 
+    AOOnum = values$statistics$AOO
     
     gauge(AOOnum, min = 0, max = 15000, label = paste("AOO"),gaugeSectors(
       success = c(10000,15000), danger = c(0,9999)
@@ -500,9 +490,8 @@ server <- function(input, output, session) {
   })
   
   output$plt3 <- flexdashboard::renderGauge({
-    
-    stats_df = SingleStats()
-    RecordCount = stats_df$RecordCount
+
+    RecordCount = values$statistics$RecordCount
     
     gauge( RecordCount, min = 0, max = 150, label = paste("RecordCount"),gaugeSectors(
       success = c(75,150), danger = c(0,74)
@@ -511,9 +500,8 @@ server <- function(input, output, session) {
   })
   
   output$plt4 <- flexdashboard::renderGauge({
-    
-    stats_df = SingleStats()
-    TDWGnum = stats_df$TDWGCount
+
+    TDWGnum = values$statistics$TDWGCount
     
       gauge(TDWGnum, min = 0, max = 10, label = paste("TDWG count"),gaugeSectors(
         success = c(6,10), danger = c(0,5)
