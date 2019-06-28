@@ -114,7 +114,7 @@ ui <- fluidPage(
                                       br(),
                                       
                                       # extra data that can't be generated automatically - ask user to input or select
-                                      actionButton("addData", "4. Enter Additional Data >>", style='padding:4px; font-size:80%'),
+                                      actionButton("addData", "4. Enter Additional Data ▼▲", style='padding:4px; font-size:80%'),
                                       
                                       br(),
                                       
@@ -186,7 +186,7 @@ ui <- fluidPage(
                                     mainPanel(
                                       
                                       # Output: Header + summary of distribution ----
-                                      actionButton("minmaxgbif", "Hide/Show search results", style='padding:4px; font-size:80%'),
+                                      actionButton("minmaxgbif", "Hide/Show search results ▼▲", style='padding:4px; font-size:80%'),
                                       
                                       br(),
                                       
@@ -205,7 +205,7 @@ ui <- fluidPage(
                                       
                                       br(),
                                       
-                                      actionButton("minmaxmap", "Hide/Show map", style='padding:4px; font-size:80%'),
+                                      actionButton("minmaxmap", "Hide/Show map ▼▲", style='padding:4px; font-size:80%'),
                                       
                                       h5("Distribution map: "),
                                       
@@ -215,34 +215,36 @@ ui <- fluidPage(
                                       
                                       br(),
                                       
-                                      actionButton("minmaxstats", "Hide/Show statistics", style='padding:4px; font-size:80%'),
+                                      actionButton("minmaxstats", "Hide/Show statistics ▼▲", style='padding:4px; font-size:80%'),
                                       h5("Statistics: "),
                                       conditionalPanel(
-                                        condition = "input.minmaxstats % 2 == 0",DT::dataTableOutput("singletab")
-                                      ),
-                                      
-                                      tags$blockquote("
+                                        condition = "input.minmaxstats % 2 == 0",DT::dataTableOutput("singletab"),
+                                        
+                                        tags$blockquote("
                                       Gauges in green indicate high probability of being Least Concern, red indicates possibly threatened."),
-                                      
-                                      dashboardBody(
-                                        fluidRow(
-                                          
-                                          
-                                          box(flexdashboard::gaugeOutput("plt1"),width=3,background ="green" ),
-                                          
-                                          box(flexdashboard::gaugeOutput("plt2"),width=3,background ="green" ),
-                                          
-                                          box(flexdashboard::gaugeOutput("plt3"),width=3,background ="green" ),
-                                          
-                                          box(flexdashboard::gaugeOutput("plt4"),width=3,background ="green" )
-                                          
+                                        
+                                        dashboardBody(
+                                          fluidRow(
+                                            
+                                            
+                                            box(flexdashboard::gaugeOutput("plt1"),width=3,background ="green" ),
+                                            
+                                            box(flexdashboard::gaugeOutput("plt2"),width=3,background ="green" ),
+                                            
+                                            box(flexdashboard::gaugeOutput("plt3"),width=3,background ="green" ),
+                                            
+                                            box(flexdashboard::gaugeOutput("plt4"),width=3,background ="green" )
+                                            
                                           )
-                                           
+                                          
+                                        )
+                                        
                                         ),
+                                    
                              
 
                                       
-                                      actionButton("minmaxSIS", "Hide/Show SIS tables", style='padding:4px; font-size:80%'),
+                                      actionButton("minmaxSIS", "Hide/Show SIS tables ▼▲", style='padding:4px; font-size:80%'),
                                       
                                       br(),
                                       conditionalPanel(
@@ -545,38 +547,39 @@ server <- function(input, output, session) {
   output$outallf <- DT::renderDataTable({
     allfields = allfields(input$speciesinput, input$powo)
     #credits$internal_taxon_id = input$datasetInput[1,1]
-    allfields
+    datatable(allfields, colnames = c('ID', 'Trend', 'No threat', 'Threat unknown')) 
   })
   
   output$outassessments <- DT::renderDataTable({
     assessments = assessments(input$speciesinput, input$powo)
     #credits$internal_taxon_id = input$datasetInput[1,1]
-    assessments
+    datatable(assessments, colnames = c('ID', 'Rationale', 'Map', 'Date', 'Version', 'Category', 'Trend', 'System', 'Language', 'Range', 'Pop', 'Habitat', 'Threats', 'Manual', 'Realm'))
   })
   
   output$outocc <- DT::renderDataTable({
     occ = countries(input$powo)
-    occ
+    datatable(occ, colnames = c('ID', 'Lookup', 'Country', 'Presence', 'Origin', 'Seasonality')) 
   })
   
   output$outcredits <- DT::renderDataTable({
     credits = credits(input$name, input$email, input$affiliation, input$speciesinput, input$powo)
     #credits$internal_taxon_id = input$datasetInput[1,1]
     credits
+    
   })
   
   output$outhab <- DT::renderDataTable({
     req(input$habinput)
     hab = habitats(input$habinput, input$speciesinput, input$powo)
     #credits$internal_taxon_id = input$datasetInput[1,1]
-    hab
+    datatable(hab, colnames = c('Name','Lookup','ID', 'Suitability', 'Important', 'Season')) 
   })
   
   output$outgfinput <- DT::renderDataTable({
     req(input$gfinput)
     plantspecific = plantspecific(input$gfinput, input$speciesinput, input$powo)
     #credits$internal_taxon_id = input$datasetInput[1,1]
-    plantspecific
+    datatable(plantspecific, colnames = c('Growth Form', 'Lookup', 'ID')) 
   })
   
   output$outtax <- DT::renderDataTable({
