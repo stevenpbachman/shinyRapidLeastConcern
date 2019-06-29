@@ -356,7 +356,8 @@ server <- function(input, output, session) {
   values <- reactiveValues(points=NULL,
                            native_range=NULL,
                            statistics=NULL,
-                           powo_results=NULL)
+                           powo_results=NULL,
+                           species_info=NULL)
   
   ### Home page navigation
   
@@ -384,9 +385,20 @@ server <- function(input, output, session) {
                  })
     
     if (input$powo != "") {
+      # get native range from POWO
       powo_results <- check.tdwg(input$powo)
       values$native_range <- powo_results
+
+      # add indicator for points in native range
       gbif_results <- find.native(gbif_results, values$native_range, TDWGpolys)
+
+      # use POWO info to generate species info tables
+
+      input_info <- reactiveValuesToList(input)
+      input_info$powo_info <- values$powo_results
+      input_info$native_range <- values$native_range
+      
+      values$species_info <- get_species_info(input_info)
     }
 
     values$points <- gbif_results
@@ -478,7 +490,7 @@ server <- function(input, output, session) {
 
   observeEvent(input$getSingleStats, {
     powo_info <- filter(values$powo_results, IPNI_ID == input$powo)
-    print(powo_info)
+    
     withProgress(message = 'Getting there...',
                  value = 2, {
                    values$statistics = calculate_statistics(powo_info$name, powo_info$IPNI_ID, values$points)
@@ -536,104 +548,83 @@ server <- function(input, output, session) {
   # Show GBIF occurrence points
   output$pointstab <- DT::renderDataTable({
     req(input$speciesinput)
-    values$points
+    if (! is.null(values$points)) {
+      select(values$points, -native_range)
+    }
   }, 
   options = list(pageLength = 5))
   
   # download the cleaned gbif point file - adding in compiler and citation if added after map was first generated
   output$download = downloadHandler(
     filename = function(){
-      paste(input$speciesinput, "_", Sys.Date(), ".csv", sep = "" ) # change this to species name
+      date <- format(Sys.Date(), "%Y%m%d")
+      species_name <- str_replace_all(input$speciesinput, " ", "_")
+      paste(species_name, "_", date, ".csv", sep = "" )
     },
     content = function(file){
-      df = mapInput()
-      df$COMPILER = paste0(input$name)
-      ##, ", ", substr(input$firstname, 1, 1),".", input$initials, sep = "")
-      df$CITATION = paste0(input$affiliation, sep = "")
+      df = select(values$points, -native_range)
+      df$COMPILER = input$name
+      df$CITATION = input$affiliation
       
-      write.csv(df, file, row.names = FALSE)
+      write_csv(df, file)
       }
   )
   
   # Show csv files in mainpanel as data tables before download
   output$outallf <- DT::renderDataTable({
-    allfields = allfields(input$speciesinput, input$powo)
-    #credits$internal_taxon_id = input$datasetInput[1,1]
-    datatable(allfields, colnames = c('ID', 'Trend', 'No threat', 'Threat unknown')) 
+    values$species_info$allfields
   })
   
   output$outassessments <- DT::renderDataTable({
-    assessments = assessments(input$speciesinput, input$powo)
-    #credits$internal_taxon_id = input$datasetInput[1,1]
-    datatable(assessments, colnames = c('ID', 'Rationale', 'Map', 'Date', 'Version', 'Category', 'Trend', 'System', 'Language', 'Range', 'Pop', 'Habitat', 'Threats', 'Manual', 'Realm'))
+    values$species_info$assessments
   })
   
   output$outocc <- DT::renderDataTable({
-    occ = countries(input$powo)
-    datatable(occ, colnames = c('ID', 'Lookup', 'Country', 'Presence', 'Origin', 'Seasonality')) 
+    values$species_info$countries
   })
   
   output$outcredits <- DT::renderDataTable({
-    credits = credits(input$name, input$email, input$affiliation, input$speciesinput, input$powo)
-    #credits$internal_taxon_id = input$datasetInput[1,1]
-    credits
-    
+    values$species_info$credits
   })
   
   output$outhab <- DT::renderDataTable({
     req(input$habinput)
-    hab = habitats(input$habinput, input$speciesinput, input$powo)
-    #credits$internal_taxon_id = input$datasetInput[1,1]
-    datatable(hab, colnames = c('Name','Lookup','ID', 'Suitability', 'Important', 'Season')) 
+    values$species_info$habitats
   })
   
   output$outgfinput <- DT::renderDataTable({
     req(input$gfinput)
-    plantspecific = plantspecific(input$gfinput, input$speciesinput, input$powo)
-    #credits$internal_taxon_id = input$datasetInput[1,1]
-    datatable(plantspecific, colnames = c('Growth Form', 'Lookup', 'ID')) 
+    values$species_info$plantspecific
   })
   
   output$outtax <- DT::renderDataTable({
-  #  taxtable = taxinput()
-  taxtable = taxonomy(input$key, input$speciesinput, input$powo)
-    taxtable
+    values$species_info$taxonomy
   })
   
   # download the SIS connect files
   output$downloadSIS = downloadHandler(
     filename = function(){
-       paste("SIS_connect.zip") # change this to species name
+      date <- format(Sys.Date(), "%Y%m%d")
+      species_name <- str_replace_all(input$speciesinput, " ", "_")
+      paste(species_name, "_sis_connect_", date, ".csv", sep = "" )
     },
     content = function(file){
-      
-      saveSIS = all_SIS(species = input$speciesinput,
-                        powo =  input$powo,
-                        name = input$name,
-                        email = input$name,
-                        affiliation = input$affiliation,
-                        habitat = input$habinput,
-                        growthform = input$gfinput,
-                        key = input$key)
+      # update species info tables
+      input_info <- reactiveValuesToList(input)
+      input_info$powo_info <- values$powo_results
+      input_info$native_range <- values$native_range
+      values$species_info <- get_species_info(input_info)
 
-      zipdir = paste0(getwd(), "data/singlezip/")
-      #thefiles = list.files(zipdir, full.names = TRUE)
-      #thefilesnames = paste0(zipdir, thefiles)     
-      thefiles = c("data/singlezip/allfields.csv",
-                   "data/singlezip/assessments.csv",
-                   "data/singlezip/countries.csv",
-                   "data/singlezip/credits.csv",
-                   "data/singlezip/habitats.csv",
-                   "data/singlezip/plantspecific.csv",
-                   "data/singlezip/taxonomy.csv")
-      
-      #files2zip <- dir(zipdir, full.names = TRUE)
-      zip::zipr('singlezip.zip', thefiles)
+      prepare_sis_files(values$species_info)
 
+      zipdir = here("data/singlezip")
+      files_to_zip = purrr::map_chr(names(values$species_info), 
+                                    ~paste(zipdir, "/", .x, ".csv", sep=""))
+      
+      zip::zipr('singlezip.zip', files_to_zip)
 
       #use copy to force the download
       file.copy("singlezip.zip", file)
-
     },
     contentType = "application/zip"
    )
