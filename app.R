@@ -632,22 +632,38 @@ server <- function(input, output, session) {
   #######################################################
   
   ### 2. Batch inputs
-  batchInput <- eventReactive(input$file1, {
-    
-    df <- read.csv(input$file1$datapath)
-    
-    # check the names against POWO first
-    withProgress(message = 'Getting there...',
-                 value = 2, {
-                   applytest = lapply(df$name_in,batch.POWO)
+  observeEvent(input$file1, {
+    input_data <- read_csv(input$file1$datapath)
+
+    withProgress(message="Checking names in POWO...",
+                 value=2,
+                 {
+                   values$powo_results=purrr::map_dfr(input_data$name_in, get_accepted_name)
+                 })
+  })
+
+  observeEvent(input$getStats, {
+    withProgress(message="Getting GBIF reference keys...",
+                 value=2, 
+                 {
+                   # get gbif keys
                  })
     
-    applytest_df = do.call(rbind, applytest)
-    #applytest_df = cbind(applytest_df,df)
-    applytest_df
+    withProgress(message="Getting points from GBIF...",
+                 value=2, 
+                 {
+                   # get gbif points
+                 })
     
-  })
-  
+    withProgress(message="Getting native ranges from POWO...",
+                 value=2, 
+                 {
+                   # get native ranges
+                 })
+    
+    # clip points to native ranges
+    # calculate statistics
+  })  
   # Reactive expression to get values from sliders ----
   # output 
 
@@ -672,34 +688,20 @@ server <- function(input, output, session) {
     input$tdwg
   })
   
-  statsInput <- eventReactive(input$getStats, {
-    species = batchInput()
-    #single = LC_comb(species)
-    withProgress(message = 'Getting there...',
-                 value = 2, {
-                   multi = purrr::map2_dfr(species$fullname, species$IPNI_ID, LC_comb)
-                 })
-    df = multi
-    df
-  })
-  
-
-  
   ### 2. Batch outputs
   output$contents <- DT::renderDataTable({
-    df = batchInput()
-    df
+    values$powo_results
   }, 
   options = list(pageLength = 5))
   
   output$getcleantab = downloadHandler(
     # download the checked names table
     filename = function(){
-      paste("checked_names_", Sys.Date(), ".csv", sep = "" ) # change this to species name
+      date <- format(Sys.Date(), "%Y%m%d")
+      paste("checked_names_", date, ".csv", sep = "" )
     },
     content = function(file){
-      write.csv(batchInput(), file, row.names = FALSE)
-      
+      write_csv(values$powo_results, file)
     }
   )
   
