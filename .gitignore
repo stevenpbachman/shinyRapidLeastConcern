@@ -3,4 +3,4 @@
 .RData
 .Ruserdata
 *.zip
-data/single_zip
+data/singlezip/*

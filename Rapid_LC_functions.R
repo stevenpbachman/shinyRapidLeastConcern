@@ -175,7 +175,7 @@ check.accepted.POWO = function(name_in) {
 # 3.3b check name against POWO
 # takes binomial and checks against POWO (http://www.plantsoftheworldonline.org)
 
-batch.POWO = function(name_in) {
+get_accepted_name = function(name_in) {
   # lookup name in POWO
   powo_results = check.accepted.POWO(name_in)
   # remove anything that wasn't the name we wanted
