@@ -407,7 +407,7 @@ server <- function(input, output, session) {
   #Show results of GBIF search as a table
   output$summarytab <- DT::renderDataTable({
     req(input$speciesinput)
-    sp_key = gbif.key(input$speciesinput)
+    check_gbif(input$speciesinput)
   },
   options = list(pageLength = 5)#, #formatStyle(
   #columns = 'usageKey',
@@ -624,23 +624,62 @@ server <- function(input, output, session) {
     withProgress(message="Getting GBIF reference keys...",
                  value=2, 
                  {
-                   # get gbif keys
+                   gbif_keys <- 
+                    values$powo_results %>%
+                    select(IPNI_ID, name_in) %>%
+                    mutate(gbif_results=map(name_in, get_gbif_key)) %>%
+                    unnest()
                  })
-    
+  
+    # this could grind things to a halt with too many species/points
     withProgress(message="Getting points from GBIF...",
                  value=2, 
                  {
-                   # get gbif points
+                   values$points <-
+                    gbif_keys %>%
+                    mutate(points=map(gbif_key, gbif.points)) %>%
+                    select(IPNI_ID, points) %>%
+                    unnest()
                  })
-    
+
     withProgress(message="Getting native ranges from POWO...",
                  value=2, 
                  {
-                   # get native ranges
+                   values$native_range <- map_dfr(values$powo_results$IPNI_ID, check.tdwg)
+                 })
+
+    nested_native_range <- 
+      values$native_range %>% 
+      group_by(POWO_ID) %>% 
+      nest()
+    
+    withProgress(message="Checking which points are in native range...",
+                 value=2,
+                 {
+                  # clip points to native ranges
+                  values$points <-
+                    values$points %>%
+                    group_by(IPNI_ID) %>%
+                    nest() %>%
+                    left_join(nested_native_range, by=c("IPNI_ID"="POWO_ID")) %>%
+                    mutate(points=map2(data.x, data.y, ~find.native(.x, .y, TDWGpolys))) %>%
+                    unnest(points)
                  })
     
-    # clip points to native ranges
-    # calculate statistics
+
+    withProgress(message="Calculating least concern statistics...",
+                 value=2,
+                 {
+                   values$statistics <-
+                    values$points %>%
+                    group_by(IPNI_ID) %>%
+                    nest() %>%
+                    left_join(gbif_keys, by="IPNI_ID") %>%
+                    mutate(statistics=pmap(list(name_in, IPNI_ID, data, warning), 
+                                           calculate_statistics)) %>%
+                    select(statistics) %>%
+                    unnest()
+                 })    
   })  
   # Reactive expression to get values from sliders ----
   # output 
