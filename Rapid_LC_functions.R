@@ -12,11 +12,9 @@ TDWG_to_IUCN_version3_UTF <- read.delim(here("data","TDWG_to_IUCN.txt"), encodin
 
 
 #### 3 - functions-------------
-#test = gbif.key("Aloe zebrina")
-#testpoints = gbif.points("2777656")
 
 # 3.1 get the gbif key
-gbif.key = function (full_name) {
+check_gbif = function (full_name) {
   
   options = data.frame(
     usageKey = NA_integer_,
@@ -58,6 +56,38 @@ gbif.key = function (full_name) {
   options
 }
 
+get_gbif_key <- function(species_name) {
+  bad_result_types <- c(
+    "PROPARTE_SYNONYM",
+    "DOUBTFUL",
+    "HETEROTYPIC_SYNONYM",
+    "HOMOTYPIC_SYNONYM",
+    "MISAPPLIED",
+    "SYNONYM"
+  )
+
+  warning <- NA_character_
+  gbif_key <- NA_integer_
+
+  gbif_matches <- check_gbif(species_name)
+
+  if (is.na(gbif_matches$usageKey[1])) {
+    warning <- "No name match in GBIF"
+  }
+
+  if (gbif_matches$status[1] %in% bad_result_types) {
+    # Is this really something bad? As long as it's accepted in POWO?
+    warning <- "Best name match against GBIF is not treated by GBIF as accepted"
+  }
+
+  if (is.na(warning)) {
+    gbif_key <- gbif_matches$usageKey[1]
+  }
+ 
+  tibble(gbif_key=gbif_key,
+         warning=warning)
+}
+
 # 3.2 fetch the points using key
 gbif.points = function(key) {
   res = tibble(
@@ -73,7 +103,7 @@ gbif.points = function(key) {
     SEASONAL = "1",
     DATA_SENS = "No",
     SOURCE = NA_character_,
-    YEAR = -999L,
+    YEAR = NA_character_,
     COMPILER = NA_character_,
     CITATION = NA_character_,
     recordedBy = NA_character_,
@@ -82,7 +112,7 @@ gbif.points = function(key) {
     datasetKey = NA_character_
   )
 
-  if (key == "") {
+  if (key == "" | is.na(key)) {
     return(res)
   }
   
@@ -233,7 +263,14 @@ deduplicate_by <- function(.data, ...) {
 
 # 3.5 native range clip
 
+
 find.native = function(points, native_range, TDWGpolys){
+
+  if (is.na(points$BINOMIAL[1])) {
+    native_points <- mutate(points, native_range=NA_character_)
+    return(native_points)
+  }
+
   # TODO: maybe replace/add option for raster solution if more points provided
   # prepare the point data as spatial
   point_sf <- st_as_sf(points, 
@@ -249,6 +286,8 @@ find.native = function(points, native_range, TDWGpolys){
   # convert back to normal data frame from sf
   native_points <- as_tibble(native_points)
   native_points <- select(native_points, -geometry)
+  
+  native_points
 }
 
 # 3.6 SIS files allfields.csv
@@ -451,32 +490,35 @@ eoo.aoo = function(native) {
 ###############
 
 # 3.15 combine functions to get LC results - use apply on this
-calculate_statistics = function(name, ipni_key, points) {
+calculate_statistics = function(name, ipni_key, points, warning=NA_character_) {
   # get the gbif key or bail out if there is no match
+  
   statistics <- tibble(
     EOO=NA_real_,
     AOO=NA_real_,
     RecordCount=NA_integer_,
     TDWGCount=NA_integer_,
     POWO_ID=ipni_key,
-    full_name=name,
-    Warning=NA_character_
+    full_name=name
   )
   
   points <- filter(points, ! is.na(native_range))
 
   if (nrow(points) == 0) {
-    statistics$Warning = "No GBIF points in native range"
+    warning = "No GBIF points in native range"
   }
 
-  range_measures <- eoo.aoo(points)
+  if (is.na(warning)) {
+    range_measures <- eoo.aoo(points)
 
-  statistics <- mutate(statistics, 
-                       RecordCount=nrow(points),
-                       TDWGCount=length(unique(points$native_range)),
-                       EOO=range_measures$EOO,
-                       AOO=range_measures$AOO)
-  
+    statistics <- mutate(statistics, 
+                        RecordCount=nrow(points),
+                        TDWGCount=length(unique(points$native_range)),
+                        EOO=range_measures$EOO,
+                        AOO=range_measures$AOO)
+  }  
+  statistics$Warning = warning
+
   return(statistics)
 }
 
