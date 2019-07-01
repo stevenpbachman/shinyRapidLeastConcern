@@ -291,16 +291,16 @@ find.native = function(points, native_range, TDWGpolys){
 
 # 3.6 SIS files allfields.csv
 # generate info files
-allfields = function(info){
+allfields = function(powo_id){
   tibble(
-    internal_taxon_id = info$powo,	
+    internal_taxon_id = powo_id,	
     CurrentTrendDataDerivation.value = "Suspected",
     nothreats.nothreats = "TRUE",
     threatsunknown.value = "FALSE")
 }
 
 # 3.7 SIS files assessments.csv
-assessments = function(info){
+assessments = function(powo_id){
   rationale_str = paste("This species has a very wide distribution,", 
                         "large population,", 
                         "is not currently experiencing any major threats", 
@@ -308,7 +308,7 @@ assessments = function(info){
                         "This species is therefore assessed as Least Concern.")
   
   tibble(
-    internal_taxon_id = info$powo,	
+    internal_taxon_id = powo_id,	
     RedListRationale.value = rationale_str,	
     mapstatus.status = "Done",	
     RedListAssessmentDate.value = format(Sys.Date(), "%d/%m/%Y"),	
@@ -326,58 +326,61 @@ assessments = function(info){
 }
 
 # 3.8 SIS files countries.csv
-countries = function(info){
+countries = function(native_range){
   # merge with IUCN country file
-  merged_range = left_join(info$native_range, TDWG_to_IUCN_version3_UTF, by =c("LEVEL3_COD"="Level.3.code"))
+  country_table = left_join(native_range, TDWG_to_IUCN_version3_UTF, by=c("LEVEL3_COD"="Level.3.code"))
   
   # now get rid of the duplicates to get a clean list
-  merged_range = deduplicate_by(merged_range, countryoccurrence.countryoccurrencesubfield.countryoccurrencename)
+  country_table = deduplicate_by(country_table, POWO_ID, countryoccurrence.countryoccurrencesubfield.countryoccurrencename)
   
-  country_tab = merged_range[c(6,10,9)]
-  country_tab$CountryOccurrence.CountryOccurrenceSubfield.presence = "Extant"
-  country_tab$CountryOccurrence.CountryOccurrenceSubfield.origin = "Native"
-  country_tab$CountryOccurrence.CountryOccurrenceSubfield.seasonaility = "Resident"
-  country_tab
+  country_table$CountryOccurrence.CountryOccurrenceSubfield.presence = "Extant"
+  country_table$CountryOccurrence.CountryOccurrenceSubfield.origin = "Native"
+  country_table$CountryOccurrence.CountryOccurrenceSubfield.seasonaility = "Resident"
+
+  select(country_table,
+         POWO_ID,
+         countryoccurrence.countryoccurrencesubfield.countryoccurrencename,
+         CountryOccurrence.CountryOccurrenceSubfield.presence,
+         CountryOccurrence.CountryOccurrenceSubfield.origin,
+         CountryOccurrence.CountryOccurrenceSubfield.seasonaility)
 }
 
 # 3.9 SIS files - credits.csv
-credits = function(info) {
+credits = function(powo_id, name="your_name your_name", email="your email", affiliation="your affiliation") {
   tibble(
-    internal_taxon_id = info$powo,
+    internal_taxon_id = powo_id,
     credit_type = "Assessor",
-    firstName = word(info$name,1),
-    lastName = word(info$name,2),
+    firstName = word(name,1),
+    lastName = word(name,2),
     initials = "",
     Order = "1",
-    email = info$email,
-    affiliation = info$affiliation,
+    email = email,
+    affiliation = affiliation,
     user_id = "1"
   )
 }
 
 # 3.10 SIS files - habitats.csv
-habitats = function(info) {
+habitats = function(powo_id, habitat=NA_character_) {
   
-  habitat = tibble(description=info$habinput)
-  habitat = merge(habitat, habitatlist, by="description")
+  species_habitats <- tibble(internal_taxon_id=powo_id, description=habitat)
+  species_habitats <- left_join(species_habitats, habitatlist, by="description")
   
-  habitat$internal_taxon_id = info$powo
-  habitat = rename(habitat, 
-               GeneralHabitats.GeneralHabitatsSubfield.GeneralHabitatsName=description,
-               GeneralHabitats.GeneralHabitatsSubfield.GeneralHabitatsLookup=code)
+  species_habitats <- rename(species_habitats, 
+                             GeneralHabitats.GeneralHabitatsSubfield.GeneralHabitatsName=description,
+                             GeneralHabitats.GeneralHabitatsSubfield.GeneralHabitatsLookup=code)
   
-  habitat$GeneralHabitats.GeneralHabitatsSubfield.suitability = "Suitable"
-  habitat$GeneralHabitats.GeneralHabitatsSubfield.majorImportance	= ""
-  habitat$GeneralHabitats.GeneralHabitatsSubfield.season = ""	
-  return(habitat)
+  species_habitats$GeneralHabitats.GeneralHabitatsSubfield.suitability = "Suitable"
+  species_habitats$GeneralHabitats.GeneralHabitatsSubfield.majorImportance	= ""
+  species_habitats$GeneralHabitats.GeneralHabitatsSubfield.season = ""	
+  return(species_habitats)
 }
 
 # 3.11 SIS files - plantspecific.csv
-plantspecific = function(info) {
+plantspecific = function(powo_id, growth_form=NA_character_) {
   
-  gf = tibble(description=info$gfinput)
-  gf = merge(gf, plantgflist, by="description")
-  gf$internal_taxon_id = info$powo
+  gf = tibble(internal_taxon_id=powo_id, description=growth_form)
+  gf = left_join(gf, plantgflist, by="description")
   
   gf = rename(gf,
               PlantGrowthForms.PlantGrowthFormsSubfield.PlantGrowthFormsName=description,
@@ -394,19 +397,18 @@ plantspecific = function(info) {
 
 
 # 3.12 SIS files taxonomy.csv
-taxonomy = function(info){
+taxonomy = function(powo_id, gbif_key, powo_author){
   
-  name_info = name_usage(info$key)
-  powo_info = filter(info$powo_info, IPNI_ID == info$powo)
-  
+  name_info = name_usage(gbif_key)
+
   tax = tibble(
-    internal_taxon_id = info$powo,	
+    internal_taxon_id = powo_id,	
     family = name_info$data$family,
     genus = name_info$data$genus,
     species = word(name_info$data$species,2),  
-    taxonomicAuthority = powo_info$author)
+    taxonomicAuthority = powo_author)
 
-  tax = merge(tax, taxonomy_iucn, by="family")
+  tax = inner_join(tax, taxonomy_iucn, by="family")
   tax = tax[c(2, 6:8, 1, 3:5)]
   
   return(tax)
@@ -430,9 +432,8 @@ get_species_info <- function(input_info) {
 }
 
 # 3.13 save all SIS files
-prepare_sis_files = function(species_info){
-  zip_folder = here("data/singlezip")
-  
+prepare_sis_files = function(species_info, zip_folder=here("data/singlezip")){
+ 
   if (file.exists(zip_folder)) {
     unlink(zip_folder, recursive=TRUE)
   }
@@ -520,293 +521,3 @@ calculate_statistics = function(name, ipni_key, points, warning=NA_character_) {
 
   return(statistics)
 }
-
-# 3.16 combine functions to get LC results - use apply on this
-all_batch_points = function(species){
-  
-  full_name = species$name
-  ID = species$IPNI_ID
-  
-  # get the gbif key or bail out if there is no match
-  sp_key = gbif.key(full_name)
-  sp_key = sp_key[1,1]
-  
-  # get the points using the key
-  points = gbif.points(sp_key$usageKey)
-  
-  # get the native range
-  native = check.tdwg(ID)
-  
-  # clip points to native range
-  res = native.clip(points, TDWGpolys, ID)  
-  res$BINOMIAL = full_name
-  
-  res = subset(
-    res,
-    select = c(
-      'POWO_ID',
-      'BasisOfRec',
-      'DEC_LONG',
-      'DEC_LAT',
-      'BINOMIAL',
-      'EVENT_YEAR',
-      'CATALOG_NO',
-      'SPATIALREF',
-      'PRESENCE',
-      'ORIGIN',
-      'SEASONAL',
-      'YEAR',
-      'DATA_SENS',
-      'SOURCE',
-      'COMPILER',
-      'CITATION')
-  )
-  
-  colnames(res)[which(names(res) == "POWO_ID")] = "internal_taxon_id"
-  
-  # reformat basis of record column
-  res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "FOSSIL_SPECIMEN","FossilSpecimen" )
-  res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "PRESERVED_SPECIMEN","PreservedSpecimen" )
-  res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "LIVING_SPECIMEN", "LivingSpecimen")
-  res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "HUMAN_OBSERVATION", "HumanObservation")
-  res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "MACHINE_OBSERVATION","MachineObservation")
-  res$BasisOfRec = stringr::str_replace_all(res$BasisOfRec, "UNKNOWN","Unknown")
-  
-  return(res)
-  
-}
-
-# 3.17 batch allfields
-batch_allfields = function(species){
-  
-  ID = species$IPNI_ID
-  EOOval = species$EOO
-  
-  #check = check.accepted.POWO(species)
-  #ID = check$IPNI_ID  
-  allf = data.frame(
-    internal_taxon_id = ID,	
-    CurrentTrendDataDerivation.value = "Suspected",
-    nothreats.nothreats = "TRUE",
-    threatsunknown.value = "FALSE",
-    EOO.range = EOOval)
-  
-  return(allf)
-}
-
-# 3.18 batch assessments
-batch_assessments = function(species) {
-  ID = species$IPNI_ID
-  
-  sysdate = base::Sys.Date()
-  day = base::substr(sysdate, 9, 10)
-  month = base::substr(sysdate, 6, 7)
-  year = base::substr(sysdate, 1, 4)
-  as = data.frame(
-    internal_taxon_id = ID,
-    RedListRationale.value = "This species has a very wide distribution, large population, is not currently experiencing any major threats and no significant future threats have been identified. This species is therefore assessed as Least Concern.",
-    mapstatus.status = "Done",
-    RedListAssessmentDate.value = paste0(day, "/", month, "/", year),
-    RedListCriteria.critVersion	= "3.1",
-    RedListCriteria.manualCategory	= "LC",
-    PopulationTrend.value	= "Stable",
-    System.value	= "Terrestrial",
-    language.value	= "English",
-    rangedocumentation.narrative	= "",
-    populationdocumentation.narrative	= "",
-    habitatdocumentation.narrative	= "",
-    threatsdocumentation.value	= "",
-    redlistcriteria.ismanual	= "TRUE",
-    biogeographicrealm.realm = ""
-  )
-  
-  return(as)
-}
-
-# 3.19
-batch_credits = function(species) {
-  
-  ID = species$IPNI_ID
-  
-  credits = data.frame(
-    internal_taxon_id = ID,
-    credit_type = "Assessor",
-    firstName = "Your first name",   #stringr::word(name,1),
-    lastName = "Your last name", #stringr::word(name,2),
-    initials = "",
-    Order = "1",
-    email = "Your email", #email,
-    affiliation = "Your affiliation", #affiliation,
-    user_id = "1"
-  )
-  return(credits)
-}
-
-# 3.20
-batch_habitats = function(species) {
-  
-  ID = species$IPNI_ID
-  
-  hab = data.frame(
-    internal_taxon_id = 	ID,
-    GeneralHabitats.GeneralHabitatsSubfield.GeneralHabitatsName = "",
-    GeneralHabitats.GeneralHabitatsSubfield.GeneralHabitatsLookup = "",
-    GeneralHabitats.GeneralHabitatsSubfield.suitability = "Suitable",
-    GeneralHabitats.GeneralHabitatsSubfield.majorImportance	= "",
-    GeneralHabitats.GeneralHabitatsSubfield.season = ""
-  )
-  return(hab)
-}
-
-# 3.21
-batch_plantspecific = function(species) {
-  
-  ID = species$IPNI_ID
-  
-  gf = data.frame(
-    internal_taxon_id = ID,
-    PlantGrowthForms.PlantGrowthFormsSubfield.PlantGrowthFormsLookup = "",
-    PlantGrowthForms.PlantGrowthFormsSubfield.PlantGrowthFormsName = ""
-  )
-  
-  return(gf)
-}
-
-# 3.22
-batch_taxonomy = function(species){
-  
-  full_name = species$name
-  
-  sp_key = gbif.key(full_name)
-  sp_key = sp_key[1,1]
-  
-  nameinfo = rgbif::name_usage(sp_key)
-  
-  #powo = check.accepted.POWO(species)
-  #powo2 = subset(powo, subset = powo$IPNI_ID == ID)
-  
-  ID = species$IPNI_ID
-  
-  tax = data.frame(
-    internal_taxon_id = ID,	
-    #kingdom	= "PLANTAE",
-    #phylum = "",
-    #classname = "",
-    #ordername = "",
-    family =  nameinfo$data$family,
-    genus = nameinfo$data$genus,
-    species = word(nameinfo$data$species,2),  
-    taxonomicAuthority = species$author
-  )
-  
-  #now merge with iucn taxonomy to get higher tax
-  #colnames(taxonomy_iucn)[which(names(taxonomy_iucn) == "fam")] = "family"
-  taxmerged = merge(tax, taxonomy_iucn, by = "family")
-  
-  if (nrow(taxmerged) <1) {
-    taxmerged = data.frame(
-      internal_taxon_id = ID,	
-      kingdom	= "PLANTAE",
-      phylum = "UNMATCHED",
-      classname = "UNMATCHED",
-      ordername = "UNMATCHED",
-      family =  nameinfo$data$family,
-      genus = nameinfo$data$genus,
-      species = word(nameinfo$data$species,2),  
-      taxonomicAuthority = species$author)
-  }
-  
-  else {
-    
-    taxmerged = taxmerged[c(2,6:9,1,3:5)]
-    
-    return(taxmerged)
-  }
-  
-}
-
-# 3.23
-batch_countries = function(species){
-  
-  #ID = "1078218-2"
-  
-  ID = species$IPNI_ID
-  
-  #internal_taxon_id = ID  
-  range = check.tdwg(ID) 
-  # merge with IUCN country file
-  colnames(TDWG_to_IUCN_version3_UTF)[which(names(TDWG_to_IUCN_version3_UTF) == "Level.3.code")] = "LEVEL3_COD"
-  merged_range = merge(range, TDWG_to_IUCN_version3_UTF, by = "LEVEL3_COD")
-  country_tab = merged_range
-  
-  # now get rid of the duplicates to get a clean list
-  merged_range = merged_range[!duplicated(merged_range$countryoccurrence.countryoccurrencesubfield.countryoccurrencename), ]
-  
-  country_tab$CountryOccurrence.CountryOccurrenceSubfield.presence = "Extant"
-  country_tab$CountryOccurrence.CountryOccurrenceSubfield.origin = "Native"
-  country_tab$CountryOccurrence.CountryOccurrenceSubfield.seasonaility = "Resident"
-  country_tab$internal_taxon_id = ID
-  country_tab
-  
-  country_tab = country_tab[c(6,9:13)]
-  
-  #countries = data.frame(internal_taxon_id = ID, country_tab)
-  #countries = countries[c(2,6:9,1,3:5)]
-  
-}
-
-# 3.24 biorealms
-# to be added
-#LC.biorealms = function(TDWG_realms, result.tdwg) {
-#  #add realms using TDWG_realms table - first change column name to get match with result.tdwg
-#  colnames(TDWG_realms) [which(names(TDWG_realms) == "LEVEL3_COD")] = "tdwgCode"
-#  #merge result.tdwg and TDWG_realms so we have realms linked to POWO ID
-#  realms = merge(TDWG_realms, result.tdwg, by.x = "tdwgCode", by.y = "tdwgCode")
-#  # summarise and collapse to get single column with all unique realms - nice!
-#  biorealm_summary = realms %>% group_by(POWO_ID) %>% summarise(newREALM = paste(unique(REALM), collapse =
-#                                                                                   ","))
-#  make_biorealms = data.frame(POWO_ID = biorealm_summary$POWO_ID,
-#                              biogeographicrealm.realm = (gsub("," , "\\|", biorealm_summary$newREALM)))
-#  return(make_biorealms)
-#  
-#}
-
-# 3.25
-# to be added
-# #LC.references = function(LC.results){
-#   #powoid = trees_7079[["ID"]]
-#   #powoid = powoid[1:10]
-#   powoid = LC.results[["POWO_ID"]]s
-#   
-#   type = c("electronic source","electronic source","electronic source" )
-#   author = c("Board of Trustees, RBG Kew","Moat, J.", "Chamberlain, S")
-#   year = c("2018","2017", "2017")
-#   title = c("Plants of the World Online Portal", "rCAT: Conservation Assessment Tools. R package version 0.1.5.","rgbif: Interface to the Global 'Biodiversity' Information Facility API. R package version
-#             0.9.9.")
-#   place_published = c("Richmond, UK", "", "")
-#   url = c("http://powo.science.kew.org/","https://CRAN.R-project.org/package=rCAT", "https://CRAN.R-project.org/package=rgbif")
-#   reference_type = c("Assessment","Assessment", "Assessment")
-#   references = data.frame(type, author, year, title, place_published, url, reference_type)
-#   references$internal_taxon_id = powoid[1] 
-#   
-#   # make loop to create table with refs below and add powoid to each table, then bind together
-#   list = powoid[-1]
-#   
-#   for (l in list){
-#     type = c("electronic source","electronic source","electronic source" )
-#     author = c("Board of Trustees, RBG Kew","Moat, J.", "Chamberlain, S")
-#     year = c("2018","2017", "2017")
-#     title = c("Plants of the World Online Portal", 
-#               "rCAT: Conservation Assessment Tools. R package version 0.1.5.",
-#               "rgbif: Interface to the Global 'Biodiversity' Information Facility API. R package version
-#               0.9.9.")
-#     place_published = c("Richmond, UK", "", "")
-#     url = c("http://powo.science.kew.org/","https://CRAN.R-project.org/package=rCAT", "https://CRAN.R-project.org/package=rgbif")
-#     reference_type = c("Assessment","Assessment", "Assessment")
-#     all.references = data.frame(type, author, year, title, place_published, url, reference_type)
-#     all.references$internal_taxon_id = l 
-#     references = rbind(references,all.references)
-#   }
-#   
-#   return(references)
-# }
