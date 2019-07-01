@@ -357,6 +357,7 @@ server <- function(input, output, session) {
                            native_range=NULL,
                            statistics=NULL,
                            powo_results=NULL,
+                           gbif_keys=NULL,
                            species_info=NULL)
   
   ### Home page navigation
@@ -609,17 +610,19 @@ server <- function(input, output, session) {
       paste(species_name, "_sis_connect_", date, ".csv", sep = "" )
     },
     content = function(file){
+      zip_folder = here("data/singlezip")
+      
       # update species info tables
       input_info <- reactiveValuesToList(input)
       input_info$powo_info <- values$powo_results
       input_info$native_range <- values$native_range
       values$species_info <- get_species_info(input_info)
+  
+      prepare_sis_files(values$species_info, zip_folder=zip_folder)
 
-      prepare_sis_files(values$species_info)
-
-      zipdir = here("data/singlezip")
+      
       files_to_zip = purrr::map_chr(names(values$species_info), 
-                                    ~paste(zipdir, "/", .x, ".csv", sep=""))
+                                    ~paste(zip_folder, "/", .x, ".csv", sep=""))
       
       zip::zipr('singlezip.zip', files_to_zip)
 
@@ -646,7 +649,7 @@ server <- function(input, output, session) {
     withProgress(message="Getting GBIF reference keys...",
                  value=2, 
                  {
-                   gbif_keys <- 
+                   values$gbif_keys <- 
                     values$powo_results %>%
                     select(IPNI_ID, name_in) %>%
                     mutate(gbif_results=map(name_in, get_gbif_key)) %>%
@@ -658,7 +661,7 @@ server <- function(input, output, session) {
                  value=2, 
                  {
                    values$points <-
-                    gbif_keys %>%
+                    values$gbif_keys %>%
                     mutate(points=map(gbif_key, gbif.points)) %>%
                     select(IPNI_ID, points) %>%
                     unnest()
@@ -696,7 +699,7 @@ server <- function(input, output, session) {
                     values$points %>%
                     group_by(IPNI_ID) %>%
                     nest() %>%
-                    left_join(gbif_keys, by="IPNI_ID") %>%
+                    left_join(values$gbif_keys, by="IPNI_ID") %>%
                     mutate(statistics=pmap(list(name_in, IPNI_ID, data, warning), 
                                            calculate_statistics)) %>%
                     select(statistics) %>%
@@ -745,11 +748,14 @@ server <- function(input, output, session) {
   )
   
   output$stats <- DT::renderDataTable({
-    dt = statsInput()
-    dt = subset(dt, EOO >= eooValue())
-    dt = subset(dt, AOO >= aooValue())
-    dt = subset(dt, RecordCount >= recordsValue())
-    dt = subset(dt, TDWGCount >= tdwgValue())
+    if (! is.null(values$statistics)) {
+      filter(values$statistics,
+             EOO >= eooValue(),
+             AOO >= aooValue(),
+             RecordCount >= recordsValue(),
+             TDWGCount >= tdwgValue())
+      }
+      
     }, 
     options = list(pageLength = 5))
   
@@ -759,102 +765,56 @@ server <- function(input, output, session) {
     
      # download the results
     filename = function(){
-      paste("batch_SIS_connect_", Sys.Date(), ".zip", sep = "" ) # change this to species name
+      date <- format(Sys.Date(), "%Y%m%d")
+      paste("batch_SIS_connect_", date, ".zip", sep = "" )
     },
     content = function(file){
-
-      dt = statsInput()
-      
+      batch_folder <- here("data/batchzip")
       # first get the full results out - this will include any error species - with explanation
-      dtpath = paste0(getwd(), "/data/batchzip/results.csv")
-      dttable = dt
-      write.csv(dttable, dtpath, row.names = FALSE)
+      write_csv(values$statistics, paste(batch_folder, "/results.csv", sep=""))
       
       # now take out the species that are errors so we have clean set for next bit
-      drop_cols = "Warning"
-      dt  = dt [ , !(names(dt ) %in% drop_cols)]
+      least_concern_results <- 
+        values$statistics %>%
+        filter(is.na(Warning)) %>%
+        select(-Warning)
  
       # now you have to add the filters again, otherwise you get the full table
-      dt = subset(dt, EOO >= eooValue())
-      dt = subset(dt, AOO >= aooValue())
-      dt = subset(dt, RecordCount >= recordsValue())
-      dt = subset(dt, TDWGCount >= tdwgValue())
+      least_concern_results <- filter(least_concern_results,
+                                      EOO >= eooValue(),
+                                      AOO >= aooValue(),
+                                      RecordCount >= recordsValue(),
+                                      TDWGCount >= tdwgValue())
       
       # get the points
-      withProgress(message = 'Getting there...',
-                   value = 2, {
-                     multipoints = adply(dt, 1, all_batch_points) # run through each species
-                   })
-      
-      
-      multipoints = adply(dt, 1, all_batch_points) # run through each species
-      multipoints = multipoints[ -c(1:10)] #drop first 11 columns
-      pointspath = paste0(getwd(), "/data/batchzip/points.csv") # save path
-      write.csv(multipoints, pointspath, row.names = FALSE) # write it - row.names = FALSE! 
+      least_concern_points <- filter(values$points, IPNI_ID %in% least_concern_results$POWO_ID)
+      write_csv(least_concern_points, paste(batch_folder, "/points.csv", sep=""))
       
       # now the csv files
-      # allfields
-      batch_allfields = adply(dt, 1, batch_allfields)
-      batch_allfields = batch_allfields[ -c(1:10)]
-      batch_allfieldspath = paste0(getwd(), "/data/batchzip/allfields.csv")
-      write.csv(batch_allfields, batch_allfieldspath, row.names = FALSE) # write it - row.names = FALSE! 
+      least_concern_ranges <- filter(values$native_range, POWO_ID %in% least_concern_results$POWO_ID)
+      least_concern_keys <- filter(values$gbif_keys, IPNI_ID %in% least_concern_results$POWO_ID)
+      least_concern_powo <- filter(values$powo_results, IPNI_ID %in% least_concern_results$POWO_ID)
       
-      # assessments
-      batch_assessments = adply(dt, 1, batch_assessments)
-      batch_assessments = batch_assessments[ -c(1:10)]
-      batch_assessmentspath = paste0(getwd(), "/data/batchzip/assessments.csv")
-      write.csv(batch_assessments, batch_assessmentspath, row.names = FALSE) # write it - row.names = FALSE! 
+      values$species_info <- list(
+        allfields=map_dfr(least_concern_results$POWO_ID, allfields),
+        assessments=map_df(least_concern_results$POWO_ID, assessments),
+        countries=countries(least_concern_ranges),
+        credits=map_dfr(least_concern_results$POWO_ID, credits),
+        habitats=map_dfr(least_concern_results$POWO_ID, habitats),
+        plantspecific=map_dfr(least_concern_results$POWO_ID, plantspecific),
+        taxonomy=pmap_dfr(list(least_concern_results$POWO_ID, least_concern_keys$gbif_key, least_concern_powo$author), taxonomy)
+      )
       
-      # credits
-      batch_credits = adply(dt, 1, batch_credits)
-      batch_credits = batch_credits[ -c(1:10)]
-      batch_creditspath = paste0(getwd(), "/data/batchzip/credits.csv")
-      write.csv(batch_credits, batch_creditspath, row.names = FALSE) # write it - row.names = FALSE! 
+      prepare_sis_files(values$species_info, zip_folder=batch_folder)
       
-      # habitats
-      batch_habitats = adply(dt, 1, batch_habitats)
-      batch_habitats = batch_habitats[ -c(1:10)]
-      batch_habitatspath = paste0(getwd(), "/data/batchzip/habitats.csv")
-      write.csv(batch_habitats, batch_habitatspath, row.names = FALSE) # write it - row.names = FALSE! 
+      files_to_zip = purrr::map_chr(names(values$species_info), 
+                                    ~paste(batch_folder, "/", .x, ".csv", sep=""))
       
-      # plantspecific
-      batch_plantspecific = adply(dt, 1, batch_plantspecific)
-      batch_plantspecific = batch_plantspecific[ -c(1:10)]
-      batch_plantspecificpath = paste0(getwd(), "/data/batchzip/plantspecific.csv")
-      write.csv(batch_plantspecific, batch_plantspecificpath, row.names = FALSE) # write it - row.names = FALSE! 
       
-      # plantspecific
-      batch_taxonomy = adply(dt, 1, batch_taxonomy)
-      batch_taxonomy = batch_taxonomy[ -c(1:10)]
-      batch_taxonomypath = paste0(getwd(), "/data/batchzip/taxonomy.csv")
-      write.csv(batch_taxonomy, batch_taxonomypath, row.names = FALSE) # write it - row.names = FALSE! 
+      zip::zipr('batchzip.zip', files_to_zip)
       
-      # countries
-      batch_countries = adply(dt, 1, batch_countries)
-      batch_countries = batch_countries[ -c(1:10)]
-      batch_countriespath = paste0(getwd(), "/data/batchzip/countries.csv")
-      write.csv(batch_countries, batch_countriespath, row.names = FALSE) # write it - row.names = FALSE! 
-    
-      
-      #write.csv(dt, file, row.names = FALSE)
-      batchzipdir = paste0(getwd(), "/data/batchzip/")
-      
-      thefiles = c("data/batchzip/allfields.csv",
-                   "data/batchzip/assessments.csv",
-                   "data/batchzip/countries.csv",
-                   "data/batchzip/credits.csv",
-                   "data/batchzip/habitats.csv",
-                   "data/batchzip/plantspecific.csv",
-                   "data/batchzip/taxonomy.csv",
-                   "data/batchzip/results.csv",
-                   "data/batchzip/points.csv")
-
-        # get all files in the directory
-      
-      zip::zipr('data/batchzip.zip', thefiles)
-        
-      # use copy to force the download
-      file.copy("data/batchzip.zip", file)
+      #use copy to force the download
+      file.copy("batchzip.zip", file)
       
       
     },
