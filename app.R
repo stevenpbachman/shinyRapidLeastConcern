@@ -389,14 +389,13 @@ server <- function(input, output, session) {
       # get native range from POWO
       powo_results <- check.tdwg(input$powo)
       values$native_range <- powo_results
-
+      
       # add indicator for points in native range
       gbif_results <- find.native(gbif_results, values$native_range, TDWGpolys)
-
+      
       # use POWO info to generate species info tables
-
       input_info <- reactiveValuesToList(input)
-      input_info$powo_info <- values$powo_results
+      input_info$author <- filter(values$powo_results, IPNI_ID == input$powo)$author
       input_info$native_range <- values$native_range
       
       values$species_info <- get_species_info(input_info)
@@ -420,9 +419,8 @@ server <- function(input, output, session) {
   # Show results of powo search as a table
   output$powotab <- DT::renderDataTable({
     req(input$speciesinput)
-    powosp = check.accepted.POWO(input$speciesinput)
-    values$powo_results <- powosp
-    powosp
+    values$powo_results = check.accepted.POWO(input$speciesinput)
+    values$powo_results
   },
   options = list(pageLength = 5))
   
@@ -490,6 +488,10 @@ server <- function(input, output, session) {
   #### 1 Single - generate statistics - EOO, AOO etc. using LC_comb function
 
   observeEvent(input$getSingleStats, {
+    if (! input$powo %in% values$powo_results) {
+      values$powo_results = check.accepted.POWO(input$speciesinput)
+    }
+    
     powo_info <- filter(values$powo_results, IPNI_ID == input$powo)
     
     withProgress(message = 'Getting there...',
@@ -607,14 +609,14 @@ server <- function(input, output, session) {
     filename = function(){
       date <- format(Sys.Date(), "%Y%m%d")
       species_name <- str_replace_all(input$speciesinput, " ", "_")
-      paste(species_name, "_sis_connect_", date, ".csv", sep = "" )
+      paste(species_name, "_sis_connect_", date, ".zip", sep = "" )
     },
     content = function(file){
       zip_folder = here("data/singlezip")
       
       # update species info tables
       input_info <- reactiveValuesToList(input)
-      input_info$powo_info <- values$powo_results
+      input_info$author <- filter(values$powo_results, IPNI_ID == input$powo)$author
       input_info$native_range <- values$native_range
       values$species_info <- get_species_info(input_info)
   
@@ -770,16 +772,11 @@ server <- function(input, output, session) {
     },
     content = function(file){
       batch_folder <- here("data/batchzip")
-      # first get the full results out - this will include any error species - with explanation
-      write_csv(values$statistics, paste(batch_folder, "/results.csv", sep=""))
-      
-      # now take out the species that are errors so we have clean set for next bit
-      least_concern_results <- 
-        values$statistics %>%
-        filter(is.na(Warning)) %>%
-        select(-Warning)
+
+      # filter out any result with a warning
+      least_concern_results <- filter(values$statistics, is.na(Warning))
  
-      # now you have to add the filters again, otherwise you get the full table
+      # keep only the least concern results
       least_concern_results <- filter(least_concern_results,
                                       EOO >= eooValue(),
                                       AOO >= aooValue(),
@@ -788,13 +785,13 @@ server <- function(input, output, session) {
       
       # get the points
       least_concern_points <- filter(values$points, IPNI_ID %in% least_concern_results$POWO_ID)
-      write_csv(least_concern_points, paste(batch_folder, "/points.csv", sep=""))
       
       # now the csv files
       least_concern_ranges <- filter(values$native_range, POWO_ID %in% least_concern_results$POWO_ID)
       least_concern_keys <- filter(values$gbif_keys, IPNI_ID %in% least_concern_results$POWO_ID)
       least_concern_powo <- filter(values$powo_results, IPNI_ID %in% least_concern_results$POWO_ID)
       
+      # get all the info tables for all species
       values$species_info <- list(
         allfields=map_dfr(least_concern_results$POWO_ID, allfields),
         assessments=map_df(least_concern_results$POWO_ID, assessments),
@@ -802,9 +799,12 @@ server <- function(input, output, session) {
         credits=map_dfr(least_concern_results$POWO_ID, credits),
         habitats=map_dfr(least_concern_results$POWO_ID, habitats),
         plantspecific=map_dfr(least_concern_results$POWO_ID, plantspecific),
-        taxonomy=pmap_dfr(list(least_concern_results$POWO_ID, least_concern_keys$gbif_key, least_concern_powo$author), taxonomy)
+        taxonomy=pmap_dfr(list(least_concern_results$POWO_ID, least_concern_keys$gbif_key, least_concern_powo$author), taxonomy),
+        results=values$statistics,
+        points=least_concern_points
       )
       
+      # prepare all files for download as a zip
       prepare_sis_files(values$species_info, zip_folder=batch_folder)
       
       files_to_zip = purrr::map_chr(names(values$species_info), 
@@ -813,10 +813,8 @@ server <- function(input, output, session) {
       
       zip::zipr('batchzip.zip', files_to_zip)
       
-      #use copy to force the download
-      file.copy("batchzip.zip", file)
-      
-      
+      # use copy to force the download
+      file.copy("batchzip.zip", file)      
     },
     contentType = "application/zip"
     

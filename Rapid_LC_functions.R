@@ -419,14 +419,14 @@ get_species_info <- function(input_info) {
   info_functions <- list(
     allfields=allfields,
     assessments=assessments,
-    countries=countries,
-    credits=credits,
-    habitats=habitats,
-    plantspecific=plantspecific,
-    taxonomy=taxonomy
+    countries=function(x) countries(input_info$native_range),
+    credits=function(x) credits(x, name=input_info$name, email=input_info$email, affiliation=input_info$affiliation),
+    habitats=function(x) habitats(x, input_info$habinput),
+    plantspecific=function(x) plantspecific(x, input_info$gfinput),
+    taxonomy=function(x) taxonomy(x, input_info$key, "Geoff")
   )
 
-  species_info <- purrr::map(info_functions, ~.x(input_info))
+  species_info <- purrr::map(info_functions, ~.x(input_info$powo))
   names(species_info) <- names(info_functions)
 
   return(species_info)
