@@ -115,7 +115,7 @@ gbif.points = function(key) {
   if (key == "" | is.na(key)) {
     return(res)
   }
-  
+
   gbif_results = occ_data(
     taxonKey = key,
     hasGeospatialIssue = FALSE,
@@ -140,6 +140,7 @@ gbif.points = function(key) {
     default_data = as.list(res)
     gbif_points = tibble::add_column(gbif_points, !!! default_data[columns_to_add])
     
+
     gbif_points$YEAR = substring(Sys.Date(), 1, 4)
     gbif_points$SOURCE = paste0("https://www.gbif.org/dataset/", gbif_points$datasetKey, sep = "")
     
@@ -250,7 +251,6 @@ check.tdwg = function(ID){
   }
 
   return(results)
-
 }
 
 deduplicate_by <- function(.data, ...) {
