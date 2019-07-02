@@ -354,16 +354,15 @@ ui <- fluidPage(
 ### 4 - Server---------------
 server <- function(input, output, session) {
 
-############  INPUTS ############
-  
+  # value store for passing between things
   values <- reactiveValues(points=NULL,
                            native_range=NULL,
                            statistics=NULL,
                            powo_results=NULL,
                            gbif_keys=NULL,
                            species_info=NULL)
-  
-  ### Home page navigation
+
+  ## home navigation events ----
   
   # link to navpanel 1 single
   observeEvent(input$gotosingle, {
@@ -380,10 +379,11 @@ server <- function(input, output, session) {
   })
   
   
-  ### 1 Single -  prepare map input
+  # single species events ----
   
+  # request points and species info
   observeEvent(input$getPoints, {
-    withProgress(message = 'Querying GBIF',
+    withProgress(message = 'Querying GBIF...',
                  value = 2, {
                    gbif_results = get_gbif_points(input$key)
                  })
@@ -407,17 +407,86 @@ server <- function(input, output, session) {
     values$points <- gbif_results
   })
   
-  ### 1 Single - prepare name search results output
+  # calculate summary statistics
+  observeEvent(input$getSingleStats, {
+    if (! input$powo %in% values$powo_results) {
+      values$powo_results = search_name_powo(input$speciesinput)
+    }
+    
+    powo_info <- filter(values$powo_results, IPNI_ID == input$powo)
+    
+    withProgress(message = 'Getting there...',
+                 value = 2, {
+                   values$statistics = calculate_statistics(powo_info$name, powo_info$IPNI_ID, values$points)
+                 })
+  })
+  
+  # toggle native points on map
+  observeEvent(input$mymap_click, {
+    ClickVar<-input$mymap_click
+    
+    proxy = leafletProxy("mymap")
+    
+    proxy %>%
+      #clearGroup("NewPoints") %>%
+      #clearMarkers(layerId=input$mymap_click$id) %>%
+      addCircleMarkers(lng=ClickVar$lng, lat=ClickVar$lat, radius = 4, color = "green", group = "NewPoints")
+  })
+  
+  # point file download handler
+  output$download = downloadHandler(
+    filename = function(){
+      date <- format(Sys.Date(), "%Y%m%d")
+      species_name <- str_replace_all(input$speciesinput, " ", "_")
+      paste(species_name, "_", date, ".csv", sep = "" )
+    },
+    content = function(file){
+      df = select(values$points, -native_range)
+      df$COMPILER = input$name
+      df$CITATION = input$affiliation
+      
+      write_csv(df, file)
+    }
+  )
+  
+  # SIS zip file download handler
+  output$downloadSIS = downloadHandler(
+    filename = function(){
+      date <- format(Sys.Date(), "%Y%m%d")
+      species_name <- str_replace_all(input$speciesinput, " ", "_")
+      paste(species_name, "_sis_connect_", date, ".zip", sep = "" )
+    },
+    content = function(file){
+      zip_folder = here("data/singlezip")
+      
+      # update species info tables
+      input_info <- reactiveValuesToList(input)
+      input_info$author <- filter(values$powo_results, IPNI_ID == input$powo)$author
+      input_info$native_range <- values$native_range
+      values$species_info <- get_species_info(input_info)
+      
+      prepare_sis_files(values$species_info, zip_folder=zip_folder)
+      
+      
+      files_to_zip = purrr::map_chr(names(values$species_info), 
+                                    ~paste(zip_folder, "/", .x, ".csv", sep=""))
+      
+      zip::zipr('singlezip.zip', files_to_zip)
+      
+      #use copy to force the download
+      file.copy("singlezip.zip", file)
+    },
+    contentType = "application/zip"
+  )
+
+  # single species display items ----
   
   #Show results of GBIF search as a table
   output$summarytab <- DT::renderDataTable({
     req(input$speciesinput)
     search_name_gbif(input$speciesinput)
   },
-  options = list(pageLength = 5)#, #formatStyle(
-  #columns = 'usageKey',
-  #backgroundColor = styleEqual('red','red','red')
-  )
+  options = list(pageLength = 5))
   
   # Show results of powo search as a table
   output$powotab <- DT::renderDataTable({
@@ -427,11 +496,7 @@ server <- function(input, output, session) {
   },
   options = list(pageLength = 5))
   
-
-#######################################################
-  
-  ### 1. Single - map render
-  # Output map
+  # leaflet map to show points
   output$mymap <- renderLeaflet({
     if (is.null(values$points)) {
       return(NULL)
@@ -472,35 +537,6 @@ server <- function(input, output, session) {
       options = layersControlOptions(collapsed = FALSE)
     )
       
-  })
-  
-  observeEvent(input$mymap_click, {
-    ClickVar<-input$mymap_click
-    
-    proxy = leafletProxy("mymap")
-    
-    proxy %>%
-    #clearGroup("NewPoints") %>%
-    #clearMarkers(layerId=input$mymap_click$id) %>%
-    addCircleMarkers(lng=ClickVar$lng, lat=ClickVar$lat, radius = 4, color = "green", group = "NewPoints")
-  })
-  
-
-  
-  
-  #### 1 Single - generate statistics - EOO, AOO etc. using LC_comb function
-
-  observeEvent(input$getSingleStats, {
-    if (! input$powo %in% values$powo_results) {
-      values$powo_results = search_name_powo(input$speciesinput)
-    }
-    
-    powo_info <- filter(values$powo_results, IPNI_ID == input$powo)
-    
-    withProgress(message = 'Getting there...',
-                 value = 2, {
-                   values$statistics = calculate_statistics(powo_info$name, powo_info$IPNI_ID, values$points)
-                 })
   })
 
   # output stats table 
@@ -548,9 +584,7 @@ server <- function(input, output, session) {
       ))
       
   })
-  
-  ### 1 single - prepare download outputs
-  
+
   # Show GBIF occurrence points
   output$pointstab <- DT::renderDataTable({
     req(input$speciesinput)
@@ -559,23 +593,7 @@ server <- function(input, output, session) {
     }
   }, 
   options = list(pageLength = 5))
-  
-  # download the cleaned gbif point file - adding in compiler and citation if added after map was first generated
-  output$download = downloadHandler(
-    filename = function(){
-      date <- format(Sys.Date(), "%Y%m%d")
-      species_name <- str_replace_all(input$speciesinput, " ", "_")
-      paste(species_name, "_", date, ".csv", sep = "" )
-    },
-    content = function(file){
-      df = select(values$points, -native_range)
-      df$COMPILER = input$name
-      df$CITATION = input$affiliation
-      
-      write_csv(df, file)
-      }
-  )
-  
+
   # Show csv files in mainpanel as data tables before download
   output$outallf <- DT::renderDataTable({
     values$species_info$allfields
@@ -607,39 +625,11 @@ server <- function(input, output, session) {
     values$species_info$taxonomy
   })
   
-  # download the SIS connect files
-  output$downloadSIS = downloadHandler(
-    filename = function(){
-      date <- format(Sys.Date(), "%Y%m%d")
-      species_name <- str_replace_all(input$speciesinput, " ", "_")
-      paste(species_name, "_sis_connect_", date, ".zip", sep = "" )
-    },
-    content = function(file){
-      zip_folder = here("data/singlezip")
-      
-      # update species info tables
-      input_info <- reactiveValuesToList(input)
-      input_info$author <- filter(values$powo_results, IPNI_ID == input$powo)$author
-      input_info$native_range <- values$native_range
-      values$species_info <- get_species_info(input_info)
   
-      prepare_sis_files(values$species_info, zip_folder=zip_folder)
-
-      
-      files_to_zip = purrr::map_chr(names(values$species_info), 
-                                    ~paste(zip_folder, "/", .x, ".csv", sep=""))
-      
-      zip::zipr('singlezip.zip', files_to_zip)
-
-      #use copy to force the download
-      file.copy("singlezip.zip", file)
-    },
-    contentType = "application/zip"
-   )
   
-  #######################################################
+  # batch species events ----
   
-  ### 2. Batch inputs
+  # upload and get species ids from POWO
   observeEvent(input$file1, {
     input_data <- read_csv(input$file1$datapath)
 
@@ -649,7 +639,20 @@ server <- function(input, output, session) {
                    values$powo_results=purrr::map_dfr(input_data$name_in, get_accepted_name)
                  })
   })
+  
+  # powo info download handler
+  output$getcleantab = downloadHandler(
+    # download the checked names table
+    filename = function(){
+      date <- format(Sys.Date(), "%Y%m%d")
+      paste("checked_names_", date, ".csv", sep = "" )
+    },
+    content = function(file){
+      write_csv(values$powo_results, file)
+    }
+  )
 
+  # calculate statistics and get info for all species
   observeEvent(input$getStats, {
     withProgress(message="Getting GBIF reference keys...",
                  value=2, 
@@ -710,75 +713,22 @@ server <- function(input, output, session) {
                     select(statistics) %>%
                     unnest()
                  })    
-  })  
-  # Reactive expression to get values from sliders ----
-  # output 
-
-  output$threatvalue<- renderPrint({ 
-    if ((input$threatvalue) == TRUE) {
-      invisible(input$threatvalue)
-    } else {
-      print("WARNING - please consider possible threats (past, present, future) that could cause declines and trigger criteria A, B, C, D, or E.")
-    }
-    
-    })
-  eooValue <- reactive({
-    input$eoo
-  })
-  aooValue <- reactive({
-    input$aoo
-  })
-  recordsValue <- reactive({
-    input$records
-  })
-  tdwgValue <- reactive({
-    input$tdwg
   })
   
-  ### 2. Batch outputs
-  output$contents <- DT::renderDataTable({
-    values$powo_results
-  }, 
-  options = list(pageLength = 5))
-  
-  output$getcleantab = downloadHandler(
-    # download the checked names table
-    filename = function(){
-      date <- format(Sys.Date(), "%Y%m%d")
-      paste("checked_names_", date, ".csv", sep = "" )
-    },
-    content = function(file){
-      write_csv(values$powo_results, file)
-    }
-  )
-  
-  output$stats <- DT::renderDataTable({
-    if (! is.null(values$statistics)) {
-      filter(values$statistics,
-             EOO >= eooValue(),
-             AOO >= aooValue(),
-             RecordCount >= recordsValue(),
-             TDWGCount >= tdwgValue())
-      }
-      
-    }, 
-    options = list(pageLength = 5))
-  
-  ####################
-  
+  # batch species zip file download handler
   output$downloadbatch = downloadHandler(
     
-     # download the results
+    # download the results
     filename = function(){
       date <- format(Sys.Date(), "%Y%m%d")
       paste("batch_SIS_connect_", date, ".zip", sep = "" )
     },
     content = function(file){
       batch_folder <- here("data/batchzip")
-
+      
       # filter out any result with a warning
       least_concern_results <- filter(values$statistics, is.na(Warning))
- 
+      
       # keep only the least concern results
       least_concern_results <- filter(least_concern_results,
                                       EOO >= eooValue(),
@@ -821,12 +771,54 @@ server <- function(input, output, session) {
     },
     contentType = "application/zip"
     
-
+    
   )
   
+  # batch species reactive events ----
+
+  output$threatvalue<- renderPrint({ 
+    if ((input$threatvalue) == TRUE) {
+      invisible(input$threatvalue)
+    } else {
+      print("WARNING - please consider possible threats (past, present, future) that could cause declines and trigger criteria A, B, C, D, or E.")
+    }
     
+    })
+  eooValue <- reactive({
+    input$eoo
+  })
+  aooValue <- reactive({
+    input$aoo
+  })
+  recordsValue <- reactive({
+    input$records
+  })
+  tdwgValue <- reactive({
+    input$tdwg
+  })
+  
+  # batch species display items ----
+  
+  # display powo ids for all species
+  output$contents <- DT::renderDataTable({
+    values$powo_results
+  }, 
+  options = list(pageLength = 5))
   
   
+  # display stats for least concern species
+  output$stats <- DT::renderDataTable({
+    if (! is.null(values$statistics)) {
+      filter(values$statistics,
+             EOO >= eooValue(),
+             AOO >= aooValue(),
+             RecordCount >= recordsValue(),
+             TDWGCount >= tdwgValue())
+      }
+      
+    }, 
+    options = list(pageLength = 5))
+
 }  
 
 
