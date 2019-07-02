@@ -41,7 +41,10 @@ library(shinydashboard)
 
 
 #### 2 - Source the functions---------------
-source("Rapid_LC_functions.R")
+source(here("R/resources.R"))
+source(here("R/request_functions.R"))
+source(here("R/calculation_functions.R"))
+source(here("R/file_functions.R"))
 
 #### 3 - UI---------------
 ui <- fluidPage(
@@ -119,8 +122,8 @@ ui <- fluidPage(
                                         condition = "input.addData % 2 == 0",selectInput(
                                           "gfinput",
                                           label = ("Select growth form(s)"),
-                                          choices = plantgflist[, 2],
-                                          selected = plantgflist[1, 2],
+                                          choices = GROWTHFORM_LOOKUP$description,
+                                          selected = head(GROWTHFORM_LOOKUP, 1)$description,
                                           selectize = TRUE,
                                           multiple = TRUE
                                         )
@@ -131,8 +134,8 @@ ui <- fluidPage(
                                           "habinput",
                                           label = ("Select habitat(s)"),
                                           #choices = list("Tree - size unknown" = 1, "Tree - large" = 2, "Tree - small" = 3),
-                                          choices = habitatlist[, 2],
-                                          selected = habitatlist[126, 2],
+                                          choices = HABITAT_LOOKUP$description,
+                                          selected = tail(HABITAT_LOOKUP, 1)$description,
                                           selectize = TRUE,
                                           multiple = TRUE
                                         )
@@ -382,16 +385,16 @@ server <- function(input, output, session) {
   observeEvent(input$getPoints, {
     withProgress(message = 'Querying GBIF',
                  value = 2, {
-                   gbif_results = gbif.points(input$key)
+                   gbif_results = get_gbif_points(input$key)
                  })
     
     if (input$powo != "") {
       # get native range from POWO
-      powo_results <- check.tdwg(input$powo)
+      powo_results <- get_native_range(input$powo)
       values$native_range <- powo_results
       
       # add indicator for points in native range
-      gbif_results <- find.native(gbif_results, values$native_range, TDWGpolys)
+      gbif_results <- check_if_native(gbif_results, values$native_range, TDWG_LEVEL3)
       
       # use POWO info to generate species info tables
       input_info <- reactiveValuesToList(input)
@@ -409,7 +412,7 @@ server <- function(input, output, session) {
   #Show results of GBIF search as a table
   output$summarytab <- DT::renderDataTable({
     req(input$speciesinput)
-    check_gbif(input$speciesinput)
+    search_name_gbif(input$speciesinput)
   },
   options = list(pageLength = 5)#, #formatStyle(
   #columns = 'usageKey',
@@ -419,7 +422,7 @@ server <- function(input, output, session) {
   # Show results of powo search as a table
   output$powotab <- DT::renderDataTable({
     req(input$speciesinput)
-    values$powo_results = check.accepted.POWO(input$speciesinput)
+    values$powo_results = search_name_powo(input$speciesinput)
     values$powo_results
   },
   options = list(pageLength = 5))
@@ -439,7 +442,7 @@ server <- function(input, output, session) {
       df <- filter(df, ! is.na(native_range))
     }
     
-    sptdwg = merge(TDWGpolys, values$native_range)
+    sptdwg = merge(TDWG_LEVEL3, values$native_range)
     
     leaflet(data = df) %>%
       addMapPane("points", zIndex = 420) %>%
@@ -489,7 +492,7 @@ server <- function(input, output, session) {
 
   observeEvent(input$getSingleStats, {
     if (! input$powo %in% values$powo_results) {
-      values$powo_results = check.accepted.POWO(input$speciesinput)
+      values$powo_results = search_name_powo(input$speciesinput)
     }
     
     powo_info <- filter(values$powo_results, IPNI_ID == input$powo)
@@ -664,7 +667,7 @@ server <- function(input, output, session) {
                  {
                    values$points <-
                     values$gbif_keys %>%
-                    mutate(points=map(gbif_key, gbif.points)) %>%
+                    mutate(points=map(gbif_key, get_gbif_points)) %>%
                     select(IPNI_ID, points) %>%
                     unnest()
                  })
@@ -672,7 +675,7 @@ server <- function(input, output, session) {
     withProgress(message="Getting native ranges from POWO...",
                  value=2, 
                  {
-                   values$native_range <- map_dfr(values$powo_results$IPNI_ID, check.tdwg)
+                   values$native_range <- map_dfr(values$powo_results$IPNI_ID, get_native_range)
                  })
 
     nested_native_range <- 
@@ -689,7 +692,7 @@ server <- function(input, output, session) {
                     group_by(IPNI_ID) %>%
                     nest() %>%
                     left_join(nested_native_range, by=c("IPNI_ID"="POWO_ID")) %>%
-                    mutate(points=map2(data.x, data.y, ~find.native(.x, .y, TDWGpolys))) %>%
+                    mutate(points=map2(data.x, data.y, ~check_if_native(.x, .y, TDWG_LEVEL3))) %>%
                     unnest(points)
                  })
     
@@ -715,7 +718,7 @@ server <- function(input, output, session) {
     if ((input$threatvalue) == TRUE) {
       invisible(input$threatvalue)
     } else {
-      print(paste0("WARNING - please consider possible threats (past, present, future) that could cause declines and trigger criteria A, B, C, D, or E."))
+      print("WARNING - please consider possible threats (past, present, future) that could cause declines and trigger criteria A, B, C, D, or E.")
     }
     
     })
@@ -797,9 +800,9 @@ server <- function(input, output, session) {
         assessments=map_df(least_concern_results$POWO_ID, assessments),
         countries=countries(least_concern_ranges),
         credits=map_dfr(least_concern_results$POWO_ID, credits),
-        habitats=map_dfr(least_concern_results$POWO_ID, habitats),
-        plantspecific=map_dfr(least_concern_results$POWO_ID, plantspecific),
-        taxonomy=pmap_dfr(list(least_concern_results$POWO_ID, least_concern_keys$gbif_key, least_concern_powo$author), taxonomy),
+        habitats=map_dfr(least_concern_results$POWO_ID, habitats, HABITAT_LOOKUP),
+        plantspecific=map_dfr(least_concern_results$POWO_ID, plantspecific, GROWTHFORM_LOOKUP),
+        taxonomy=pmap_dfr(list(least_concern_results$POWO_ID, least_concern_keys$gbif_key, least_concern_powo$author), taxonomy, taxonomy_lookup=IUCN_TAXONOMY),
         results=values$statistics,
         points=least_concern_points
       )
