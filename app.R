@@ -512,7 +512,8 @@ server <- function(input, output, session) {
     leaflet(data = df) %>%
       addMapPane("points", zIndex = 420) %>%
       addMapPane("poly", zIndex = 410) %>%
-      addCircleMarkers(lng = ~DEC_LONG,
+      addCircleMarkers(group = "Points",
+                       lng = ~DEC_LONG,
                        lat = ~DEC_LAT, 
                        radius = 4, 
                        color = "green", 
@@ -522,7 +523,8 @@ server <- function(input, output, session) {
                                      "Catalogue No.:", CATALOG_NO),
                        options = pathOptions(pane = "points")) %>%
       # maybe add an IF here to control whether native range is mapped
-      addPolygons(data=sptdwg, 
+      addPolygons(group = "Native range",
+                  data=sptdwg, 
                   color = "red", 
                   weight = 1, 
                   fillColor = "red", 
