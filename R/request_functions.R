@@ -184,11 +184,6 @@ get_gbif_key <- function(species_name) {
          warning=warning)
 }
 
-
-key = "5293942"
-#lic_stip_points = get_gbif_points(key)
-
-
 get_gbif_points = function(key) {
   res = tibble(
     BasisOfRec = NA_character_,
@@ -266,3 +261,61 @@ get_gbif_points = function(key) {
   print(res[1,2])
   return(res)
 }
+
+get_random_powo = function(){
+  
+  powo_fam_results <- tibble(
+    family=NA_character_
+  )
+  
+  # use name full name to search API  
+  full_url =  paste("http://plantsoftheworldonline.org/api/1/search?f=accepted_names%2%2Cfamily_ff")
+  
+  # encode
+  full_url = utils::URLencode(full_url)
+  
+  # get raw json data
+  raw_data <- readLines(full_url, warn = "F", encoding = "UTF-8")
+  
+  # organise
+  rd = fromJSON(raw_data)
+  
+  # make data frame
+  results = rd$results
+  
+  #rd$totalResults
+  
+  # get IPNI ID
+  #results = mutate(results, IPNI_ID=str_extract(url, "(?<=names\\:)[\\d\\-]+$"))
+  
+  # only include these fields - you don't want synonym of
+  fam_results = select(results, colnames(powo_fam_results))
+  
+  # random page
+  #rand_page = sample(rd$totalPages,1)
+  
+  rand_page = sample(19,1)
+  
+  # run through cursors for n random pages
+  for (n in 1:rand_page){
+    
+    cursor = rd$cursor
+    full_url =  paste0("http://plantsoftheworldonline.org/api/1/search?cursor=",cursor)
+    raw_data <- readLines(full_url, warn = "F", encoding = "UTF-8")
+    rd = fromJSON(raw_data)
+  }
+
+  results = rd$results
+  #results = mutate(results, IPNI_ID=str_extract(url, "(?<=names\\:)[\\d\\-]+$"))
+  fam_results = select(results, colnames(powo_fam_results))
+    
+  # get random species from list
+  rand_fam = fam_results[sample(nrow(fam_results),1), ]
+  
+  # now get random species from that family
+  
+  #http://www.plantsoftheworldonline.org/?f=accepted_names%2Cspecies_f&q=Opiliaceae
+  
+}
+
+test = get_random_powo()
