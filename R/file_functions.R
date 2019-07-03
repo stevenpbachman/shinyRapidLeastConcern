@@ -70,19 +70,26 @@ countries = function(native_range){
   # merge with IUCN country file
   country_table = left_join(native_range, TDWG_TO_IUCN, by=c("LEVEL3_COD"="Level.3.code"))
   
+  #country_table$Internal_taxon_id = country_table$POWO_ID
+  
   # now get rid of the duplicates to get a clean list
-  country_table = deduplicate_by(country_table, POWO_ID, countryoccurrence.countryoccurrencesubfield.countryoccurrencename)
+  country_table = deduplicate_by(country_table,POWO_ID, countryoccurrence.countryoccurrencesubfield.countryoccurrencename)
   
   country_table$CountryOccurrence.CountryOccurrenceSubfield.presence = "Extant"
   country_table$CountryOccurrence.CountryOccurrenceSubfield.origin = "Native"
   country_table$CountryOccurrence.CountryOccurrenceSubfield.seasonaility = "Resident"
-
+  
+  country_table <- rename(country_table, 
+                           internal_taxon_id=POWO_ID)
+  
   select(country_table,
-         POWO_ID,
+         internal_taxon_id,
          countryoccurrence.countryoccurrencesubfield.countryoccurrencename,
          CountryOccurrence.CountryOccurrenceSubfield.presence,
          CountryOccurrence.CountryOccurrenceSubfield.origin,
          CountryOccurrence.CountryOccurrenceSubfield.seasonaility)
+  
+
 }
 
 credits = function(powo_id, name="your_name your_name", email="your email", affiliation="your affiliation") {
@@ -140,7 +147,7 @@ taxonomy = function(powo_id, taxonomy_lookup, gbif_key, powo_author){
     taxonomicAuthority = powo_author)
 
   tax = inner_join(tax, taxonomy_lookup, by="family")
-  tax = tax[c(2, 6:9, 1, 3:5)]
+  tax = tax[c(1, 6:9, 2:5)]
   
   return(tax)
 }

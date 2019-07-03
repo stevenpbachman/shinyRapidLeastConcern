@@ -184,6 +184,11 @@ get_gbif_key <- function(species_name) {
          warning=warning)
 }
 
+
+key = "5293942"
+#lic_stip_points = get_gbif_points(key)
+
+
 get_gbif_points = function(key) {
   res = tibble(
     BasisOfRec = NA_character_,
@@ -218,6 +223,10 @@ get_gbif_points = function(key) {
     limit = 1000
   )
   
+  if (gbif_results$meta$count == 0){
+    return(res)
+  }
+  
   gbif_points = gbif_results$data
   
   if (nrow(gbif_points) > 0) {
@@ -227,13 +236,14 @@ get_gbif_points = function(key) {
       DEC_LAT=decimalLatitude,
       DEC_LONG=decimalLongitude,
       BINOMIAL=scientificName,
-      EVENT_YEAR=year,
       CATALOG_NO=catalogNumber
     )
     
     columns_to_add = setdiff(colnames(res), colnames(gbif_points))
     default_data = as.list(res)
     gbif_points = tibble::add_column(gbif_points, !!! default_data[columns_to_add])
+    
+    #gbif_points = rename(gbif_points, EVENT_YEAR=year)
     
     gbif_points$YEAR = substring(Sys.Date(), 1, 4)
     gbif_points$SOURCE = paste0("https://www.gbif.org/dataset/", gbif_points$datasetKey, sep = "")
@@ -253,6 +263,6 @@ get_gbif_points = function(key) {
     
     res = select(gbif_points, colnames(res))
   }
-  
+  print(res[1,2])
   return(res)
 }

@@ -344,7 +344,8 @@ ui <- fluidPage(
                       #includeHTML("README.html")
              ),
              
-             tabPanel("Help", includeHTML("README.html")
+             tabPanel("Help"
+                      #, includeHTML("README.html")
              )
     )
 )
@@ -382,6 +383,7 @@ server <- function(input, output, session) {
   
   # request points and species info
   observeEvent(input$getPoints, {
+    
     withProgress(message = 'Querying GBIF...',
                  value = 2, {
                    gbif_results = get_gbif_points(input$key)
@@ -402,7 +404,7 @@ server <- function(input, output, session) {
       
       values$species_info <- get_species_info(input_info)
     }
-
+    gbif_results$BINOMIAL = input$speciesinput
     values$points <- gbif_results
   })
   
@@ -652,7 +654,34 @@ server <- function(input, output, session) {
       write_csv(values$powo_results, file)
     }
   )
+  
+  
+###########
+  
+#    values$powo_results %>%
+  
+#    gbif_keys <-  
+#    checked_palms %>%
+#    select(IPNI_ID, name_in) %>%
+#    mutate(gbif_results=map(name_in, get_gbif_key)) %>%
+#    unnest()
+#  
+#  
+#  gbif_points <-
+#    gbif_keys %>%
+#    mutate(points=map(gbif_key, get_gbif_points)) %>%
+#    select(IPNI_ID, points) %>%
+#    unnest()
+#  
+#Licuala stipitata_key = "2736324"
+#  
+#test = get_gbif_points(caryota_rumph_key)##
 
+#checked_palms[1,]
+############  
+  
+  
+  
   # calculate statistics and get info for all species
   observeEvent(input$getStats, {
     withProgress(message="Getting GBIF reference keys...",
