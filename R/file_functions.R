@@ -140,7 +140,7 @@ taxonomy = function(powo_id, taxonomy_lookup, gbif_key, powo_author){
     taxonomicAuthority = powo_author)
 
   tax = inner_join(tax, taxonomy_lookup, by="family")
-  tax = tax[c(2, 6:8, 1, 3:5)]
+  tax = tax[c(2, 6:9, 1, 3:5)]
   
   return(tax)
 }

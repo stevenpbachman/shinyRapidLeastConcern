@@ -344,8 +344,7 @@ ui <- fluidPage(
                       #includeHTML("README.html")
              ),
              
-             tabPanel("Help"
-                      #includeHTML("README.html")
+             tabPanel("Help", includeHTML("README.html")
              )
     )
 )
@@ -415,7 +414,7 @@ server <- function(input, output, session) {
     
     powo_info <- filter(values$powo_results, IPNI_ID == input$powo)
     
-    withProgress(message = 'Getting there...',
+    withProgress(message = 'Calculating statistics...',
                  value = 2, {
                    values$statistics = calculate_statistics(powo_info$name, powo_info$IPNI_ID, values$points)
                  })

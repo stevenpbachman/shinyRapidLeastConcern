@@ -235,7 +235,6 @@ get_gbif_points = function(key) {
     default_data = as.list(res)
     gbif_points = tibble::add_column(gbif_points, !!! default_data[columns_to_add])
     
-
     gbif_points$YEAR = substring(Sys.Date(), 1, 4)
     gbif_points$SOURCE = paste0("https://www.gbif.org/dataset/", gbif_points$datasetKey, sep = "")
     
@@ -249,7 +248,7 @@ get_gbif_points = function(key) {
                             "MACHINE_OBSERVATION"="MachineObservation",
                             "OBSERVATION"="",
                             "PRESERVED_SPECIMEN"="PreservedSpecimen",
-                            "UNKNOWN"="Unknown",
+                            "UNKNOWN"="Unknown"
                           ))
     
     res = select(gbif_points, colnames(res))
