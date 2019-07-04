@@ -265,7 +265,8 @@ get_gbif_points = function(key) {
 get_random_powo = function(){
   
   powo_fam_results <- tibble(
-    family=NA_character_
+    family=NA_character_,
+    accepted=NA_character_
   )
   
   # use name full name to search API  
@@ -290,6 +291,8 @@ get_random_powo = function(){
   
   # only include these fields - you don't want synonym of
   fam_results = select(results, colnames(powo_fam_results))
+  fam_results = subset(fam_results, accepted == "TRUE")
+  fam_results = subset(fam_results, select = family)
   
   # random page
   #rand_page = sample(rd$totalPages,1)
@@ -307,7 +310,7 @@ get_random_powo = function(){
 
   results = rd$results
   #results = mutate(results, IPNI_ID=str_extract(url, "(?<=names\\:)[\\d\\-]+$"))
-  fam_results = select(results, colnames(powo_fam_results))
+  fam_results = select(results, family)
     
   # get random species from list
   rand_fam = fam_results[sample(nrow(fam_results),1), ]
@@ -315,6 +318,28 @@ get_random_powo = function(){
   # now get random species from that family
   
   #http://www.plantsoftheworldonline.org/?f=accepted_names%2Cspecies_f&q=Opiliaceae
+  
+  full_url = paste0("http://plantsoftheworldonline.org/api/1/search?f=accepted_names%2Cspecies_f&q=", rand_fam)
+  raw_data <- readLines(full_url, warn = "F", encoding = "UTF-8")
+  rd = fromJSON(raw_data)
+  
+  #rand_page = sample(50,1)
+  
+  #for (n in 1:rand_page){
+    
+  #  cursor = rd$cursor
+  #  full_url =  paste0("http://plantsoftheworldonline.org/api/1/search?cursor=",cursor)
+  #  raw_data <- readLines(full_url, warn = "F", encoding = "UTF-8")
+  #  rd = fromJSON(raw_data)
+  #}
+  
+  # ERROR something weird here - the cursor goes back to the family search...
+  # for now just take from the first page
+  
+  results = rd$results
+  spe_results = select(results, name)
+  
+  rand_spe = spe_results[sample(nrow(spe_results),1), ]
   
 }
 
