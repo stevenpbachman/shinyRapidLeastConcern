@@ -269,6 +269,7 @@ get_random_powo = function(){
       )
   
   # use name full name to search API  
+  # there are 450 families in POWO, so results will all be on one page
   full_url =  paste("http://plantsoftheworldonline.org/api/2/search?f=accepted_names,family_f&page.size=480")
   
   # encode
@@ -285,8 +286,11 @@ get_random_powo = function(){
   # get random family
   rand_fam = fam_results[sample(nrow(fam_results),1), ]
   
+  #### now search on that random family to get list of genera - note will be more than 480 in some cases so need 
+  #### different approach
+  
   # now get random accepted genus
-  full_url = paste0("http://plantsoftheworldonline.org/api/1/search?f=accepted_name,genus_f&page.size=480&q=", rand_fam)
+  full_url = paste0("http://plantsoftheworldonline.org/api/1/search?f=accepted_names,genus_f&page.size=480&q=", rand_fam)
   
   # can leave at 480 max, but there will be some fams with more genera?
   # now get random genus
@@ -299,14 +303,34 @@ get_random_powo = function(){
   
   # organise
   rd = fromJSON(raw_data)
-  results = rd$results
-  gen_results = select(results, name)
- 
-  # get random family
-  rand_gen = gen_results[sample(nrow(gen_results),1), ]
+
+  random_genus_number = sample(rd$totalResults,1)
+  returned_genus = nrow(rd$results)
+  cursor = rd$cursor
   
-  # now get random accepted species
-  full_url = paste0("http://plantsoftheworldonline.org/api/1/search?f=accepted_name,species_f&page.size=480&q=", rand_gen)
+  while (returned_genus < random_genus_number){
+    
+    url <- paste0(full_url, "&cursor=", cursor, collapse="")
+    raw_data <- readLines(url, warn=FALSE, encoding="UTF-8")
+    results <- fromJSON(raw_data)
+    rd <- results + nrow(rd$results)
+    cursor <- rd$cursor
+  }
+  
+  # we're only keeping the latest results from POWO, so need to change the random genus number to match
+  random_genus_number <- mod(random_genus_number, 480)
+  
+  random_genus = rd$results[random_genus_number, ]$name
+  
+  ####
+  #### now final step to get random species from genus - repeat method above
+  ####
+  
+  # now get random accepted genus
+  full_url = paste0("http://plantsoftheworldonline.org/api/1/search?f=accepted_names,species_f&page.size=480&q=", random_genus)
+  
+  # can leave at 480 max, but there will be some fams with more genera?
+  # now get random genus
   
   # encode
   full_url = utils::URLencode(full_url)
@@ -317,31 +341,22 @@ get_random_powo = function(){
   # organise
   rd = fromJSON(raw_data)
   
-  results = rd$results
-  spe_results = select(results, name)
+  random_species_number = sample(rd$totalResults,1)
+  returned_species = nrow(rd$results)
+  cursor = rd$cursor
   
-  # get random family
-  rand_spe = spe_results[sample(nrow(spe_results),1), ]
-
+  while (returned_species< random_species_number){
+    
+    url <- paste0(full_url, "&cursor=", cursor, collapse="")
+    raw_data <- readLines(url, warn=FALSE, encoding="UTF-8")
+    results <- fromJSON(raw_data)
+    rd <- results + nrow(rd$results)
+    cursor <- rd$cursor
+  }
+  
+  # we're only keeping the latest results from POWO, so need to change the random genus number to match
+  random_species_number <- mod(random_species_number, 480)
+  
+  random_species = rd$results[random_species_number, ]$name 
+  
 }
-
-#test = get_random_powo()
-
-# random page
-#rand_page = sample(rd$totalPages,1)
-
-#rand_page = sample(19,1)
-
-# run through cursors for n random pages
-#for (n in 1:rand_page){
-
-#  cursor = rd$cursor
-#  full_url =  paste0("http://plantsoftheworldonline.org/api/1/search?cursor=",cursor)
-#  raw_data <- readLines(full_url, warn = "F", encoding = "UTF-8")
-#  rd = fromJSON(raw_data)
-#}
-
-#results = rd$results
-#results = mutate(results, IPNI_ID=str_extract(url, "(?<=names\\:)[\\d\\-]+$"))
-#fam_results = select(results, family)
-
