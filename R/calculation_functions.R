@@ -31,7 +31,7 @@ calculate_range = function(points_df) {
   return(range_results)
 }
 
-calculate_statistics = function(name, ipni_key, points, warning=NA_character_) {
+calculate_statistics = function(name, ipni_key, points, native_distribution, warning=NA_character_) {
   # get the gbif key or bail out if there is no match
   
   statistics <- tibble(
@@ -54,7 +54,8 @@ calculate_statistics = function(name, ipni_key, points, warning=NA_character_) {
 
     statistics <- mutate(statistics, 
                         RecordCount=nrow(points),
-                        TDWGCount=length(unique(points$native_range)),
+                        #TDWGCount=length(unique(points$native_range)),
+                        TDWGCount=length(unique(native_distribution$LEVEL3_COD)), 
                         EOO=range_measures$EOO,
                         AOO=range_measures$AOO)
   }  

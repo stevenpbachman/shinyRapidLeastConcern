@@ -441,7 +441,7 @@ server <- function(input, output, session) {
     
     withProgress(message = 'Calculating statistics...',
                  value = 2, {
-                   values$statistics = calculate_statistics(powo_info$name, powo_info$IPNI_ID, values$points)
+                   values$statistics = calculate_statistics(powo_info$name, powo_info$IPNI_ID, values$points, values$native_range)
                  })
   })
   
@@ -749,7 +749,7 @@ server <- function(input, output, session) {
     nested_native_range <- 
       values$native_range %>% 
       group_by(POWO_ID) %>% 
-      nest()
+      nest(.key = "native_tdwg")
     
     withProgress(message="Checking which points are in native range...",
                  value=2,
@@ -760,7 +760,7 @@ server <- function(input, output, session) {
                     group_by(IPNI_ID) %>%
                     nest() %>%
                     left_join(nested_native_range, by=c("IPNI_ID"="POWO_ID")) %>%
-                    mutate(points=map2(data.x, data.y, ~check_if_native(.x, .y, TDWG_LEVEL3))) %>%
+                    mutate(points=map2(data, native_tdwg, ~check_if_native(.x, .y, TDWG_LEVEL3))) %>%
                     unnest(points)
                  })
     
@@ -773,7 +773,8 @@ server <- function(input, output, session) {
                     group_by(IPNI_ID) %>%
                     nest() %>%
                     left_join(values$gbif_keys, by="IPNI_ID") %>%
-                    mutate(statistics=pmap(list(name_in, IPNI_ID, data, warning), 
+                     left_join(nested_native_range, by=c("IPNI_ID"="POWO_ID")) %>%
+                     mutate(statistics=pmap(list(name_in, IPNI_ID, data, native_tdwg, warning), 
                                            calculate_statistics)) %>%
                     select(statistics) %>%
                     unnest()
