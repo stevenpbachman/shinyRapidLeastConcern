@@ -263,91 +263,67 @@ get_gbif_points = function(key) {
 }
 
 get_random_powo = function(){
-  
-  powo_fam_results <- tibble(
-    family=NA_character_
-      )
-  
-  # search powo for all families
-  full_url =  paste("http://plantsoftheworldonline.org/api/2/search?f=accepted_names,family_f&page.size=480")
-  
-  # encode
-  full_url = utils::URLencode(full_url)
-  
-  # get raw JSON data
-  raw_data <- readLines(full_url, warn = "F", encoding = "UTF-8")
-  
-  # organise
-  rd = fromJSON(raw_data)
-  results = as.data.frame(rd$results)
-  fam_results = select(results, colnames(powo_fam_results))
+  search_url <- "http://plantsoftheworldonline.org/api/2/search"
+
+  # make request for list of families and parse response
+  family_response <- GET(search_url, query=list(f="accepted_names,family_f", page.size=480))
+  family_content <- content(family_response, as="text")
+  family_content <- fromJSON(family_content)
+  family_results <- family_content$results
 
   # get random family
-  rand_fam = fam_results[sample(nrow(fam_results),1), ]
+  random_family = family_results[sample(nrow(family_results), 1), ]$family
   
   # now get list of accepted genera from the random family
-  full_url = paste0("http://plantsoftheworldonline.org/api/1/search?f=accepted_names,genus_f&page.size=480&q=", rand_fam)
-  
-  # encode
-  full_url = utils::URLencode(full_url)
-  
-  # get raw JSON data
-  raw_data <- readLines(full_url, warn = "F", encoding = "UTF-8")
-  
-  # organise
-  rd = fromJSON(raw_data)
+  genera_response <- GET(search_url, query=list(f="accepted_names,genus_f", page.size=480, q=random_family))
+  genera_content <- content(genera_response, as="text")
+  genera_results <- fromJSON(genera_content)
 
-  # get genus number
-  random_genus_number = sample(rd$totalResults,1)
-  returned_genus = nrow(rd$results)
-  cursor = rd$cursor
+  # get a random genus number
+  random_genus_number = sample(genera_results$totalResults, 1)
+  returned_genera = nrow(genera_results$results)
+  cursor = genera_results$cursor
   
-  while (returned_genus < random_genus_number){
-    
-    url <- paste0(full_url, "&cursor=", cursor, collapse="")
-    raw_data <- readLines(url, warn=FALSE, encoding="UTF-8")
-    results <- fromJSON(raw_data)
-    rd <- results + nrow(rd$results)
-    cursor <- rd$cursor
+  while (returned_genera < random_genus_number){
+    genera_response <- GET(search_url, query=list(f="accepted_names,genus_f", page.size=480, q=random_family, cursor=cursor))
+  
+    genera_content <- content(genera_response, as="text")
+    genera_results <- fromJSON(genera_content)
+    returned_genera <- returned_genera + nrow(genera_results$results)
+    cursor <- genera_results$cursor
   }
   
   # we're only keeping the latest results from POWO, so need to change the random genus number to match
   random_genus_number <- mod(random_genus_number, 480)
   
   # return random genus
-  random_genus = rd$results[random_genus_number, ]$name
+  random_genus = genera_results$results[random_genus_number, ]$name
   
   #### now final step to get random species from genus - repeat method above
  
   # now get list of species from the random genus
-  full_url = paste0("http://plantsoftheworldonline.org/api/1/search?f=accepted_names,species_f&page.size=480&q=", random_genus)
-  
-  # encode
-  full_url = utils::URLencode(full_url)
-  
-  # get raw JSON data
-  raw_data <- readLines(full_url, warn = "F", encoding = "UTF-8")
-  
-  # organise
-  rd = fromJSON(raw_data)
+  species_response <- GET(search_url, query=list(f="accepted_names,species_f", page.size=480, q=random_genus))
+  species_content <- content(species_response, as="text")
+  species_results <- fromJSON(species_content)
   
   # get species number
-  random_species_number = sample(rd$totalResults,1)
-  returned_species = nrow(rd$results)
-  cursor = rd$cursor
+  random_species_number = sample(species_results$totalResults, 1)
+  returned_species = nrow(species_results$results)
+  cursor = species_results$cursor
   
-  while (returned_species< random_species_number){
+  while (returned_species < random_species_number){
     
-    url <- paste0(full_url, "&cursor=", cursor, collapse="")
-    raw_data <- readLines(url, warn=FALSE, encoding="UTF-8")
-    results <- fromJSON(raw_data)
-    rd <- results + nrow(rd$results)
-    cursor <- rd$cursor
+    species_response <- GET(search_url, query=list(f="accepted_names,genus_f", page.size=480, q=random_family, cursor=cursor))
+  
+    species_content <- content(species_response, as="text")
+    species_results <- fromJSON(species_content)
+    returned_species <- returned_genera + nrow(species_results$results)
+    cursor <- species_results$cursor
   }
   
   # we're only keeping the latest results from POWO, so need to change the random species number to match
   random_species_number <- mod(random_species_number, 480)
   
-  random_species = rd$results[random_species_number, ]$name 
+  random_species = species_results$results[random_species_number, ]$name 
   
 }

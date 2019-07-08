@@ -39,7 +39,7 @@ library(rCAT)
 library(flexdashboard)
 library(shinydashboard)
 library(shinyjs)
-library(V8)
+#library(V8)
 
 #### 2 - Source the functions---------------
 source(here("R/resources.R"))
@@ -88,15 +88,14 @@ ui <- fluidPage(
               tabPanel("1 Single",
                       sidebarLayout(position = "left",
                                     sidebarPanel(
-                                    actionButton("reset_button", "Reset Page"),
+                                    actionButton("randomSpecies", "Random species!"),
                                       
                                       br(),
                                       br(),
                                       
                                       textInput("speciesinput",
                                                 "1 Enter species e.g. Aloe zebrina",
-                                                value = get_random_powo()),
-                                                #placeholder = get_random_powo()),
+                                                placeholder = "Aloe zebrina"),
 
                                       br(),
                                       
@@ -369,12 +368,6 @@ server <- function(input, output, session) {
                            gbif_keys=NULL,
                            species_info=NULL)
 
-  # reset button
-  observeEvent(input$reset_button, {
-  
-    values()
-
-  })   
   
   ## home navigation events ----
   
@@ -393,6 +386,16 @@ server <- function(input, output, session) {
   })
   
   # single species events ----
+  
+  # request a random species
+  # reset button
+  observeEvent(input$randomSpecies, {
+    withProgress(message="Finding a random species...",
+                 value=2, {
+                   random_species <- get_random_powo()
+                 })
+    updateTextInput(session, "speciesinput", value=random_species)
+  }) 
   
   # request points and species info
   observeEvent(input$getPoints, {
