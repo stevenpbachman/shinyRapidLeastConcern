@@ -38,7 +38,8 @@ library(shiny)
 library(rCAT)
 library(flexdashboard)
 library(shinydashboard)
-
+library(shinyjs)
+#library(V8)
 
 #### 2 - Source the functions---------------
 source(here("R/resources.R"))
@@ -88,8 +89,10 @@ ui <- fluidPage(
                       sidebarLayout(position = "left",
                                     sidebarPanel(
                                       actionButton("resetSingleForm", "Clear form!"),
+                                      actionButton("randomSpecies", "Random species!"),
                                       br(),
                                       br(),
+                                      
                                       textInput("speciesinput",
                                                 "1 Enter species e.g. Aloe zebrina",
                                                 placeholder = "Aloe zebrina"),
@@ -109,15 +112,15 @@ ui <- fluidPage(
                           
                                       checkboxInput("native", "Remove non-native points", FALSE),
                                       
-                                      actionButton("getPoints", "Map >>"),
+                                      actionButton("getPoints", "4 Map >>"),
                                       
-                                      actionButton('getSingleStats', "Get statistics >>"),
+                                      actionButton('getSingleStats', "5 Get statistics >>"),
                                       
                                       br(),
                                       br(),
                                       
                                       # extra data that can't be generated automatically - ask user to input or select
-                                      actionButton("addData", "4. Enter Additional Data ▼▲", style='padding:4px; font-size:80%'),
+                                      actionButton("addData", "6 Enter Additional Data ▼▲", style='padding:4px; font-size:80%'),
                                       
                                       br(),
                                       
@@ -170,9 +173,9 @@ ui <- fluidPage(
                                       #helpText("Download spatial point file:"),
                                       
                                       tags$blockquote("
-                                      Check the map and statistics. As a guideline, gauges in green indicate high probability of being Least Concern, red indicates possibly threatened. If you think you have an LC specie, download the point file and SIS connect files"),
+                                      Check the map and statistics. As a guideline, gauges in green indicate high probability of being Least Concern, red indicates possibly threatened. If you think you have an LC species, download the point file and SIS connect files"),
                                       
-                                      tags$h5("5. Download data:"),
+                                      tags$h5("7 Download data:"),
                                       
                                       downloadButton('download', "Download clean point file"),
                                       
@@ -372,6 +375,7 @@ server <- function(input, output, session) {
                            gbif_keys=NULL,
                            species_info=NULL)
 
+  
   ## home navigation events ----
   
   # link to navpanel 1 single
@@ -388,9 +392,17 @@ server <- function(input, output, session) {
     )
   })
   
-  
   # single species events ----
   
+  # request a random species
+  # reset button
+  observeEvent(input$randomSpecies, {
+    withProgress(message="Finding a random species...",
+                 value=2, {
+                   random_species <- get_random_powo()
+                 })
+    updateTextInput(session, "speciesinput", value=random_species)
+  }) 
   # reset form
   observeEvent(input$resetSingleForm, {
     walk(names(values), function(x) {values[[x]] <- NULL})
@@ -689,33 +701,6 @@ server <- function(input, output, session) {
       write_csv(values$powo_results, file)
     }
   )
-  
-  
-###########
-  
-#    values$powo_results %>%
-  
-#    gbif_keys <-  
-#    checked_palms %>%
-#    select(IPNI_ID, name_in) %>%
-#    mutate(gbif_results=map(name_in, get_gbif_key)) %>%
-#    unnest()
-#  
-#  
-#  gbif_points <-
-#    gbif_keys %>%
-#    mutate(points=map(gbif_key, get_gbif_points)) %>%
-#    select(IPNI_ID, points) %>%
-#    unnest()
-#  
-#Licuala stipitata_key = "2736324"
-#  
-#test = get_gbif_points(caryota_rumph_key)##
-
-#checked_palms[1,]
-############  
-  
-  
   
   # calculate statistics and get info for all species
   observeEvent(input$getStats, {
