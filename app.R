@@ -88,8 +88,8 @@ ui <- fluidPage(
               tabPanel("1 Single",
                       sidebarLayout(position = "left",
                                     sidebarPanel(
-                                    actionButton("randomSpecies", "Random species!"),
-                                      
+                                      actionButton("resetSingleForm", "Clear form!"),
+                                      actionButton("randomSpecies", "Random species!"),
                                       br(),
                                       br(),
                                       
@@ -285,6 +285,9 @@ ui <- fluidPage(
              tabPanel("2 Batch",
 
                       sidebarPanel(
+                        actionButton("resetBatchForm", "Clear upload!"),
+                        br(),
+                        br(),
                         fileInput("file1", "Upload a list of names from a CSV file. One field must be called 'name_in' and should contain binomials e.g. 'Poa annua'",
                                 multiple = FALSE,
                                 accept = (".csv")
@@ -326,6 +329,10 @@ ui <- fluidPage(
                         sliderInput("tdwg", "Number of Level 3 TDWG regions:",
                                     min = 1, max = 100,
                                     value = 5),
+                        
+                        
+                        actionButton("resetBatchSliders", "Reset Values!"),
+                        br(),
                         
                         helpText("Click to download SIS Connect and point files:"),
                         
@@ -396,6 +403,18 @@ server <- function(input, output, session) {
                  })
     updateTextInput(session, "speciesinput", value=random_species)
   }) 
+  # reset form
+  observeEvent(input$resetSingleForm, {
+    walk(names(values), function(x) {values[[x]] <- NULL})
+    updateTextInput(session, "speciesinput", value="")
+    updateTextInput(session, "key", value="")
+    updateTextInput(session, "powo", value="")
+    updateSelectInput(session, "gfinput", selected=head(GROWTHFORM_LOOKUP, 1)$description)
+    updateSelectInput(session, "habinput", selected=tail(HABITAT_LOOKUP, 1)$description)
+    updateTextInput(session, "name", value="")
+    updateTextInput(session, "email", value="")
+    updateTextInput(session, "affiliation", value="")
+  })
   
   # request points and species info
   observeEvent(input$getPoints, {
@@ -434,7 +453,7 @@ server <- function(input, output, session) {
     
     withProgress(message = 'Calculating statistics...',
                  value = 2, {
-                   values$statistics = calculate_statistics(powo_info$name, powo_info$IPNI_ID, values$points)
+                   values$statistics = calculate_statistics(powo_info$name, powo_info$IPNI_ID, values$points, values$native_range)
                  })
   })
   
@@ -648,6 +667,18 @@ server <- function(input, output, session) {
   
   # batch species events ----
   
+  # reset uploaded values
+  observeEvent(input$resetBatchForm, {
+    walk(names(values), function(x) {values[[x]] <- NULL})
+  })
+  
+  observeEvent(input$resetBatchSliders, {
+    updateSliderInput(session, "eoo", value=30000)
+    updateSliderInput(session, "aoo", value=100)
+    updateSliderInput(session, "records", value=75)
+    updateSliderInput(session, "tdwg", value=5)
+  })
+  
   # upload and get species ids from POWO
   observeEvent(input$file1, {
     input_data <- read_csv(input$file1$datapath)
@@ -703,7 +734,7 @@ server <- function(input, output, session) {
     nested_native_range <- 
       values$native_range %>% 
       group_by(POWO_ID) %>% 
-      nest()
+      nest(.key = "native_tdwg")
     
     withProgress(message="Checking which points are in native range...",
                  value=2,
@@ -714,7 +745,7 @@ server <- function(input, output, session) {
                     group_by(IPNI_ID) %>%
                     nest() %>%
                     left_join(nested_native_range, by=c("IPNI_ID"="POWO_ID")) %>%
-                    mutate(points=map2(data.x, data.y, ~check_if_native(.x, .y, TDWG_LEVEL3))) %>%
+                    mutate(points=map2(data, native_tdwg, ~check_if_native(.x, .y, TDWG_LEVEL3))) %>%
                     unnest(points)
                  })
     
@@ -727,7 +758,8 @@ server <- function(input, output, session) {
                     group_by(IPNI_ID) %>%
                     nest() %>%
                     left_join(values$gbif_keys, by="IPNI_ID") %>%
-                    mutate(statistics=pmap(list(name_in, IPNI_ID, data, warning), 
+                     left_join(nested_native_range, by=c("IPNI_ID"="POWO_ID")) %>%
+                     mutate(statistics=pmap(list(name_in, IPNI_ID, data, native_tdwg, warning), 
                                            calculate_statistics)) %>%
                     select(statistics) %>%
                     unnest()

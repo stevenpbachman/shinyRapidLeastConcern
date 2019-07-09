@@ -85,7 +85,7 @@ get_native_range = function(ID){
 }
 
 check_if_native = function(points, native_range, range_polygons){
-
+  
   if (is.na(points$BINOMIAL[1])) {
     native_points <- mutate(points, native_range=NA_character_)
     return(native_points)
@@ -185,13 +185,20 @@ get_gbif_key <- function(species_name) {
 }
 
 get_gbif_points = function(key) {
-  res = tibble(
-    BasisOfRec = NA_character_,
-    BINOMIAL = NA_character_,
-    DEC_LONG = -999,
-    DEC_LAT = -999,
-    EVENT_YEAR = -999L,
-    CATALOG_NO = NA_character_,
+  result_name_map <- c(BasisOfRec="basisOfRecord",
+                       DEC_LAT="decimalLatitude",
+                       DEC_LONG="decimalLongitude",
+                       EVENT_YEAR="year",
+                       BINOMIAL="scientificName",
+                       CATALOG_NO="catalogNumber")
+
+  results = tibble(
+    basisOfRecord = NA_character_,
+    scientificName = NA_character_,
+    decimalLatitude = -999,
+    decimalLongitude = -999,
+    year = -999L,
+    catalogNumber = NA_character_,
     SPATIALREF = "WGS84",
     PRESENCE = "1",
     ORIGIN = "1",
@@ -207,45 +214,37 @@ get_gbif_points = function(key) {
     datasetKey = NA_character_
   )
 
-  if (key == "" | is.na(key)) {
-    return(res)
+  if (key != "" & ! is.na(key)) {
+    gbif_results <- occ_data(
+      taxonKey = key,
+      hasGeospatialIssue = FALSE,
+      hasCoordinate = TRUE,
+      limit = 1000
+    )
+
+    results_count <- gbif_results$meta$count
+  } else {
+    results_count <- 0
   }
 
-  gbif_results = occ_data(
-    taxonKey = key,
-    hasGeospatialIssue = FALSE,
-    hasCoordinate = TRUE,
-    limit = 1000
-  )
-  
-  if (gbif_results$meta$count == 0){
-    return(res)
+  if (results_count > 0){
+    gbif_points <- gbif_results$data
+  } else {
+    gbif_points <- tibble()
   }
   
-  gbif_points = gbif_results$data
-  
   if (nrow(gbif_points) > 0) {
-    
-    gbif_points = rename(gbif_points,
-      BasisOfRec=basisOfRecord,
-      DEC_LAT=decimalLatitude,
-      DEC_LONG=decimalLongitude,
-      BINOMIAL=scientificName,
-      CATALOG_NO=catalogNumber
-    )
-    
-    columns_to_add = setdiff(colnames(res), colnames(gbif_points))
-    default_data = as.list(res)
+       
+    columns_to_add = setdiff(colnames(results), colnames(gbif_points))
+    default_data = as.list(results)
     gbif_points = tibble::add_column(gbif_points, !!! default_data[columns_to_add])
-    
-    #gbif_points = rename(gbif_points, EVENT_YEAR=year)
-    
-    gbif_points$YEAR = substring(Sys.Date(), 1, 4)
+        
+    gbif_points$YEAR = format(Sys.Date(), "%Y")
     gbif_points$SOURCE = paste0("https://www.gbif.org/dataset/", gbif_points$datasetKey, sep = "")
     
     # reformat to iucn standard
     gbif_points = mutate(gbif_points,
-                          BasisOfRec=recode(BasisOfRec,
+                          basisOfRecord=recode(basisOfRecord,
                             "FOSSIL_SPECIMEN"="FossilSpecimen",
                             "HUMAN_OBSERVATION"="HumanObservation",
                             "LITERATURE"="",
@@ -256,10 +255,11 @@ get_gbif_points = function(key) {
                             "UNKNOWN"="Unknown"
                           ))
     
-    res = select(gbif_points, colnames(res))
+    results = select(gbif_points, colnames(results))
   }
   
-  return(res)
+  results <- rename(results, !!! result_name_map)
+  return(results)
 }
 
 get_random_powo = function(){
