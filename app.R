@@ -420,6 +420,7 @@ server <- function(input, output, session) {
     updateTextInput(session, "name", value="")
     updateTextInput(session, "email", value="")
     updateTextInput(session, "affiliation", value="")
+    updateSliderInput(session, "gbif_limit", value=3000)
   })
   
   # request points and species info
