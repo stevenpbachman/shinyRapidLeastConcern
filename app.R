@@ -318,7 +318,7 @@ ui <- fluidPage(
                         # Input: AOO threshold ----
                         sliderInput("aoo", "Area of occupancy (AOO):",
                                     min = 1, max = 10000,
-                                    value = 100),
+                                    value = 3000),
                         
                         # Input: Number of records threshold ----
                         sliderInput("records", "Number of records:",
@@ -597,8 +597,8 @@ server <- function(input, output, session) {
  
     AOOnum = values$statistics$AOO
     
-    gauge(AOOnum, min = 0, max = 15000, label = paste("AOO"),gaugeSectors(
-      success = c(10000,15000), danger = c(0,9999)
+    gauge(AOOnum, min = 0, max = 10000, label = paste("AOO"),gaugeSectors(
+      success = c(3000,10000), danger = c(0,2999)
     ))
     
   })
@@ -674,7 +674,7 @@ server <- function(input, output, session) {
   
   observeEvent(input$resetBatchSliders, {
     updateSliderInput(session, "eoo", value=30000)
-    updateSliderInput(session, "aoo", value=100)
+    updateSliderInput(session, "aoo", value=3000)
     updateSliderInput(session, "records", value=75)
     updateSliderInput(session, "tdwg", value=5)
   })
