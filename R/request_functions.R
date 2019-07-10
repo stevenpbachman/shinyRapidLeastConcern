@@ -184,7 +184,7 @@ get_gbif_key <- function(species_name) {
          warning=warning)
 }
 
-get_gbif_points = function(key) {
+get_gbif_points = function(key, gbif_limit) {
   result_name_map <- c(BasisOfRec="basisOfRecord",
                        DEC_LAT="decimalLatitude",
                        DEC_LONG="decimalLongitude",
@@ -219,7 +219,8 @@ get_gbif_points = function(key) {
       taxonKey = key,
       hasGeospatialIssue = FALSE,
       hasCoordinate = TRUE,
-      limit = 1000
+      #limit = 1000
+      limit = gbif_limit
     )
 
     results_count <- gbif_results$meta$count

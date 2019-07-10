@@ -108,8 +108,13 @@ ui <- fluidPage(
                                                 "3 Enter IPNI_ID from POWO search results to get native range:"
                                       ),
                                       
-                                      br(),
-                          
+                                      # Input: EOO threshold ----
+                                      sliderInput("gbif_limit", "GBIF record maximum:",
+                                                  min = 1000, 
+                                                  max = 10000,
+                                                  value = 3000, 
+                                                  step = 1000),
+                                      
                                       checkboxInput("native", "Remove non-native points", FALSE),
                                       
                                       actionButton("getPoints", "4 Map >>"),
@@ -373,7 +378,8 @@ server <- function(input, output, session) {
                            statistics=NULL,
                            powo_results=NULL,
                            gbif_keys=NULL,
-                           species_info=NULL)
+                           species_info=NULL,
+                           gbif_limit=NULL)
 
   
   ## home navigation events ----
@@ -421,7 +427,7 @@ server <- function(input, output, session) {
     
     withProgress(message = 'Querying GBIF...',
                  value = 2, {
-                   gbif_results = get_gbif_points(input$key)
+                   gbif_results = get_gbif_points(input$key, input$gbif_limit)
                  })
     
     if (input$powo != "") {
