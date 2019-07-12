@@ -300,6 +300,13 @@ ui <- fluidPage(
                         downloadButton('getcleantab', "Download table"),
                         helpText("Check for any problematic names and if necessary reload a table with a clean list of names"),
                         
+                        # Input: EOO threshold ----
+                        sliderInput("gbif_batch_limit", "GBIF record maximum:",
+                                    min = 1000, 
+                                    max = 10000,
+                                    value = 3000, 
+                                    step = 1000),
+                        
                         br(),
 
                         helpText("Click 'Get statistics' for range metrics such as EOO and AOO"),
@@ -684,6 +691,7 @@ server <- function(input, output, session) {
     updateSliderInput(session, "aoo", value=3000)
     updateSliderInput(session, "records", value=75)
     updateSliderInput(session, "tdwg", value=5)
+    updateSliderInput(session, "gbif_limit", value=3000)
   })
   
   # upload and get species ids from POWO
@@ -727,7 +735,7 @@ server <- function(input, output, session) {
                  {
                    values$points <-
                     values$gbif_keys %>%
-                    mutate(points=map(gbif_key, get_gbif_points)) %>%
+                    mutate(points=map(gbif_key, get_gbif_points, input$gbif_batch_limit)) %>%
                     select(IPNI_ID, points) %>%
                     unnest()
                  })
