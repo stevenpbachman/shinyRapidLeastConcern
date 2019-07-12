@@ -557,7 +557,7 @@ server <- function(input, output, session) {
       df <- filter(df, ! is.na(native_range))
     }
     
-    sptdwg = merge(TDWG_LEVEL3, values$native_range)
+    range_shapes <- filter(TDWG_LEVEL3, LEVEL3_COD %in% values$native_range$LEVEL3_COD)
     
     leaflet(data = df) %>%
       addMapPane("points", zIndex = 420) %>%
@@ -574,7 +574,7 @@ server <- function(input, output, session) {
                        options = pathOptions(pane = "points")) %>%
       # maybe add an IF here to control whether native range is mapped
       addPolygons(group = "Native range",
-                  data=sptdwg, 
+                  data=range_shapes, 
                   color = "red", 
                   weight = 1, 
                   fillColor = "red", 
