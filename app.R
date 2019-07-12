@@ -108,8 +108,13 @@ ui <- fluidPage(
                                                 "3 Enter IPNI_ID from POWO search results to get native range:"
                                       ),
                                       
-                                      br(),
-                          
+                                      # Input: EOO threshold ----
+                                      sliderInput("gbif_limit", "GBIF record maximum:",
+                                                  min = 1000, 
+                                                  max = 10000,
+                                                  value = 3000, 
+                                                  step = 1000),
+                                      
                                       checkboxInput("native", "Remove non-native points", FALSE),
                                       
                                       actionButton("getPoints", "4 Map >>"),
@@ -295,6 +300,13 @@ ui <- fluidPage(
                         downloadButton('getcleantab', "Download table"),
                         helpText("Check for any problematic names and if necessary reload a table with a clean list of names"),
                         
+                        # Input: EOO threshold ----
+                        sliderInput("gbif_batch_limit", "GBIF record maximum:",
+                                    min = 1000, 
+                                    max = 10000,
+                                    value = 3000, 
+                                    step = 1000),
+                        
                         br(),
 
                         helpText("Click 'Get statistics' for range metrics such as EOO and AOO"),
@@ -318,7 +330,7 @@ ui <- fluidPage(
                         # Input: AOO threshold ----
                         sliderInput("aoo", "Area of occupancy (AOO):",
                                     min = 1, max = 10000,
-                                    value = 100),
+                                    value = 3000),
                         
                         # Input: Number of records threshold ----
                         sliderInput("records", "Number of records:",
@@ -373,7 +385,8 @@ server <- function(input, output, session) {
                            statistics=NULL,
                            powo_results=NULL,
                            gbif_keys=NULL,
-                           species_info=NULL)
+                           species_info=NULL,
+                           gbif_limit=NULL)
 
   
   ## home navigation events ----
@@ -414,6 +427,7 @@ server <- function(input, output, session) {
     updateTextInput(session, "name", value="")
     updateTextInput(session, "email", value="")
     updateTextInput(session, "affiliation", value="")
+    updateSliderInput(session, "gbif_limit", value=3000)
   })
   
   # request points and species info
@@ -421,7 +435,7 @@ server <- function(input, output, session) {
     
     withProgress(message = 'Querying GBIF...',
                  value = 2, {
-                   gbif_results = get_gbif_points(input$key)
+                   gbif_results = get_gbif_points(input$key, input$gbif_limit)
                  })
     
     if (input$powo != "") {
@@ -597,8 +611,8 @@ server <- function(input, output, session) {
  
     AOOnum = values$statistics$AOO
     
-    gauge(AOOnum, min = 0, max = 15000, label = paste("AOO"),gaugeSectors(
-      success = c(10000,15000), danger = c(0,9999)
+    gauge(AOOnum, min = 0, max = 10000, label = paste("AOO"),gaugeSectors(
+      success = c(3000,10000), danger = c(0,2999)
     ))
     
   })
@@ -674,9 +688,10 @@ server <- function(input, output, session) {
   
   observeEvent(input$resetBatchSliders, {
     updateSliderInput(session, "eoo", value=30000)
-    updateSliderInput(session, "aoo", value=100)
+    updateSliderInput(session, "aoo", value=3000)
     updateSliderInput(session, "records", value=75)
     updateSliderInput(session, "tdwg", value=5)
+    updateSliderInput(session, "gbif_limit", value=3000)
   })
   
   # upload and get species ids from POWO
@@ -720,7 +735,7 @@ server <- function(input, output, session) {
                  {
                    values$points <-
                     values$gbif_keys %>%
-                    mutate(points=map(gbif_key, get_gbif_points)) %>%
+                    mutate(points=map(gbif_key, get_gbif_points, input$gbif_batch_limit)) %>%
                     select(IPNI_ID, points) %>%
                     unnest()
                  })
