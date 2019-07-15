@@ -74,19 +74,42 @@ ui <- fluidPage(
                                     sidebarPanel(
                                       actionButton("resetSingleForm", "Clear form!"),
                                       actionButton("randomSpecies", "Random species!"),
-                                      br(),
-                                      br(),
+  
+                                      fluidRow(
+                                        column(8, align="center", offset = 2,
+                                               tags$h4("Enter species")
+                                               #actionButton("randomSpecies", "Random species!")
+                                        )
+                                      ),
+                                      
+                                      #fluidRow(
+                                      #  column(4, 
+                                      #         textInput("speciesinput", label = "Enter species",
+                                      #                   placeholder = "Aloe zebrina")
+                                      #         ),
+                                      #  column(4, offset = 2,
+                                      #         actionButton("randomSpecies", "Random")
+                                      #  )
+                                      #),
                                       
                                       textInput("speciesinput",
-                                                "1 Enter species e.g. Aloe zebrina",
+                                                "Enter species e.g. Aloe zebrina",
                                                 placeholder = "Aloe zebrina"),
-
-                                      br(),
+                                      
+                                      #actionButton("randomSpecies", "Random species!"),
+                                      
                                       p("Selected GBIF ID:"),
                                       wellPanel(textOutput("key")),
                                       p("Matching POWO ID:"),
                                       wellPanel(textOutput("powo")),
 
+                                      tags$hr(style="border-color: black;"),
+                                      fluidRow(
+                                        column(8, align="center", offset = 2,
+                                               tags$h4("Set parameters:")
+                                         )
+                                        ),
+                                      
                                       # Input: EOO threshold ----
                                       sliderInput("gbif_limit", "GBIF record maximum:",
                                                   min = 1000, 
@@ -96,18 +119,64 @@ ui <- fluidPage(
                                       
                                       checkboxInput("native", "Remove non-native points", FALSE),
                                       
-                                      actionButton("runSingle", "Run analysis!"),
+                                      tags$hr(style="border-color: black;"),
+                                      #tags$h5("3 Run analysis:"),
+                                      fluidRow(
+                                        column(8, align="center", offset = 2,
+                                               tags$h4("Run analysis:")
+                                        )
+                                      ),
                                       
+                                      #actionButton("runSingle", "Run analysis!"),
+                                      fluidRow(
+                                        column(8, align="center", offset = 2,
+                                               actionButton("runSingle", "Run analysis!")
+                                        )
+                                      ),
+                                      
+                                      br(),
+                                     
+                                      tags$blockquote("
+                                      Check the map and statistics. As a guideline, gauges in green indicate high probability of being Least Concern, red indicates possibly threatened. If you think you have an LC species, download the point file and SIS connect files"),
+                                      
+                                      tags$hr(style="border-color: black;"),
+                                      #tags$h5("4 Download data:"),
+                                      fluidRow(
+                                        column(8, align="center", offset = 2,
+                                               tags$h4("Download data:")
+                                        )
+                                      ),
+                                      
+                                      fluidRow(
+                                        column(8, align="center", offset = 2,
+                                               downloadButton('download', "Download clean point file")
+                                        )
+                                      ),
+                                      #downloadButton('download', "Download clean point file"),
+                                      
+                                      br(),
+                                 
+                                      #helpText("Download SIS Connect csv files:"),
+                                      
+                                      fluidRow(
+                                        column(8, align="center", offset = 2,
+                                               downloadButton('downloadSIS', "Download SIS Connect Files")
+                                        )
+                                      ),
+                                      #downloadButton('downloadSIS', "Download SIS Connect Files"),
+                                      
+                                      br(),
+                                      br(),
                                       br(),
                                       br(),
                                       
                                       # extra data that can't be generated automatically - ask user to input or select
-                                      actionButton("addData", "6 Enter Additional Data ▼▲", style='padding:4px; font-size:80%'),
+                                      actionButton("addData", "Enter Additional Data ▼▲", style='padding:4px; font-size:80%'),
                                       
                                       br(),
                                       
                                       conditionalPanel(
-                                        condition = "input.addData % 2 == 0",selectInput(
+                                        condition = "input.addData % 2 == 1",selectInput(
                                           "gfinput",
                                           label = ("Select growth form(s)"),
                                           choices = GROWTHFORM_LOOKUP$description,
@@ -118,7 +187,7 @@ ui <- fluidPage(
                                       ),
                                       
                                       conditionalPanel(
-                                        condition = "input.addData % 2 == 0",selectInput(
+                                        condition = "input.addData % 2 == 1",selectInput(
                                           "habinput",
                                           label = ("Select habitat(s)"),
                                           #choices = list("Tree - size unknown" = 1, "Tree - large" = 2, "Tree - small" = 3),
@@ -130,44 +199,23 @@ ui <- fluidPage(
                                       ),
                                       
                                       conditionalPanel(
-                                        condition = "input.addData % 2 == 0",textInput("name",
+                                        condition = "input.addData % 2 == 1",textInput("name",
                                                                                        "Enter name of assessor/compiler:",
                                                                                        placeholder = "John Smith")
                                       ),
                                       
                                       conditionalPanel(
-                                        condition = "input.addData % 2 == 0",textInput("email",
-                                                                                      "Enter email of assessor/compiler:",
-                                                                                      placeholder = "j.smith@email.com")
+                                        condition = "input.addData % 2 == 1",textInput("email",
+                                                                                       "Enter email of assessor/compiler:",
+                                                                                       placeholder = "j.smith@email.com")
                                       ),
                                       
                                       conditionalPanel(
-                                        condition = "input.addData % 2 == 0",textInput("affiliation",
+                                        condition = "input.addData % 2 == 1",textInput("affiliation",
                                                                                        "Affiliation of assessor/compiler:",
                                                                                        placeholder = "my institution")
-                                      ),
-                                      #helpText("4. Enter additional data for Habitat and Plant growth form:"),
-                                      #tags$h5("4. Enter additional data"),
-                                      
-  
-                                      br(),
-                                      
-                                      #helpText("Download spatial point file:"),
-                                      
-                                      tags$blockquote("
-                                      Check the map and statistics. As a guideline, gauges in green indicate high probability of being Least Concern, red indicates possibly threatened. If you think you have an LC species, download the point file and SIS connect files"),
-                                      
-                                      tags$h5("7 Download data:"),
-                                      
-                                      downloadButton('download', "Download clean point file"),
-                                      
-                                      br(),
-                                 
-                                      helpText("Download SIS Connect csv files:"),
-                                      
-                                      downloadButton('downloadSIS', "Download SIS Connect Files")
-                                                   
-                                      
+                                      )
+ 
                                     ),
                                     
                                     # Show the results of the name search against GBIF and POWO
@@ -185,7 +233,7 @@ ui <- fluidPage(
                                         condition = "input.minmaxgbif % 2 == 0",DT::dataTableOutput("summarytab")
                                       ),
                                       
-                                      h5("Plant of the World Online search results:"),
+                                      #h5("Plant of the World Online search results:"),
                                       conditionalPanel(
                                         condition = "input.minmaxgbif % 2 == 0",DT::dataTableOutput("powotab")
                                       ),
