@@ -49,7 +49,7 @@ source(here("R/file_functions.R"))
 
 #### 3 - UI---------------
 ui <- fluidPage(
-  
+  useShinyjs(),
   # set themes
   theme = shinythemes::shinytheme("simplex"),
   
@@ -98,16 +98,13 @@ ui <- fluidPage(
                                                 placeholder = "Aloe zebrina"),
 
                                       br(),
-                                      
-                                      textInput("key",
-                                                "2 Enter 'usageKey' from GBIF search results to map points:"
-                                      ),
+                                      disabled(textInput("key",
+                                                         "Selected GBIF ID:")),
                                       
                                       br(),
-                                      textInput("powo",
-                                                "3 Enter IPNI_ID from POWO search results to get native range:"
-                                      ),
-                                      
+                                      disabled(textInput("powo",
+                                                         "Matching POWO ID:")),
+
                                       # Input: EOO threshold ----
                                       sliderInput("gbif_limit", "GBIF record maximum:",
                                                   min = 1000, 
@@ -430,6 +427,23 @@ server <- function(input, output, session) {
     updateSliderInput(session, "gbif_limit", value=3000)
   })
   
+  observe_row_selection <- observe(suspended=TRUE, {
+    input$summarytab_rows_selected
+    isolate({
+      gbif_key <- values$gbif_keys[input$summarytab_rows_selected, ]$usageKey
+      updateTextInput(session, "key", value=gbif_key)
+      
+      if (! is_empty(gbif_key)) {
+        gbif_name <- values$gbif_keys[values$gbif_keys$usageKey == gbif_key, ]$acceptedSpecies  
+        values$powo_results <- search_name_powo(gbif_name)
+        matching_powo <- filter(values$powo_results, accepted == TRUE)
+        matching_powo <- filter(matching_powo, name == gbif_name)
+        updateTextInput(session, "powo", value=matching_powo$IPNI_ID)
+      }
+
+    })
+  })
+  
   # request points and species info
   observeEvent(input$getPoints, {
     
@@ -534,17 +548,13 @@ server <- function(input, output, session) {
   #Show results of GBIF search as a table
   output$summarytab <- DT::renderDataTable({
     req(input$speciesinput)
-    search_name_gbif(input$speciesinput)
+    values$gbif_keys <- search_name_gbif(input$speciesinput)
+    observe_row_selection$resume()
+    values$gbif_keys
   },
-  options = list(pageLength = 5))
-  
-  # Show results of powo search as a table
-  output$powotab <- DT::renderDataTable({
-    req(input$speciesinput)
-    values$powo_results = search_name_powo(input$speciesinput)
-    values$powo_results
-  },
-  options = list(pageLength = 5))
+  options = list(pageLength = 5),
+  selection="single",
+  server=TRUE)
   
   # leaflet map to show points
   output$mymap <- renderLeaflet({
