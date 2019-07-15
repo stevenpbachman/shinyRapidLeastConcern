@@ -114,9 +114,7 @@ ui <- fluidPage(
                                       
                                       checkboxInput("native", "Remove non-native points", FALSE),
                                       
-                                      actionButton("getPoints", "4 Map >>"),
-                                      
-                                      actionButton('getSingleStats', "5 Get statistics >>"),
+                                      actionButton("runSingle", "Run analysis!"),
                                       
                                       br(),
                                       br(),
@@ -445,38 +443,33 @@ server <- function(input, output, session) {
   })
   
   # request points and species info
-  observeEvent(input$getPoints, {
+  observeEvent(input$runSingle, {
     
-    withProgress(message = 'Querying GBIF...',
+    withProgress(message = 'Getting points from GBIF...',
                  value = 2, {
                    gbif_results = get_gbif_points(input$key, input$gbif_limit)
                  })
     
-    if (input$powo != "") {
-      # get native range from POWO
-      powo_results <- get_native_range(input$powo)
-      values$native_range <- powo_results
+    withProgress(message="Getting native range from POWO...",
+                 value=2, {
+                   powo_results <- get_native_range(input$powo)
+    })
+    
+    values$native_range <- powo_results
+    
+    # add indicator for points in native range
+    gbif_results <- check_if_native(gbif_results, values$native_range, TDWG_LEVEL3)
       
-      # add indicator for points in native range
-      gbif_results <- check_if_native(gbif_results, values$native_range, TDWG_LEVEL3)
+    # use POWO info to generate species info tables
+    input_info <- reactiveValuesToList(input)
+    input_info$author <- filter(values$powo_results, IPNI_ID == input$powo)$author
+    input_info$native_range <- values$native_range
       
-      # use POWO info to generate species info tables
-      input_info <- reactiveValuesToList(input)
-      input_info$author <- filter(values$powo_results, IPNI_ID == input$powo)$author
-      input_info$native_range <- values$native_range
-      
-      values$species_info <- get_species_info(input_info)
-    }
+    values$species_info <- get_species_info(input_info)
+
     gbif_results$BINOMIAL = input$speciesinput
     values$points <- gbif_results
-  })
-  
-  # calculate summary statistics
-  observeEvent(input$getSingleStats, {
-    if (! input$powo %in% values$powo_results) {
-      values$powo_results = search_name_powo(input$speciesinput)
-    }
-    
+
     powo_info <- filter(values$powo_results, IPNI_ID == input$powo)
     
     withProgress(message = 'Calculating statistics...',
