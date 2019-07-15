@@ -918,9 +918,14 @@ server <- function(input, output, session) {
   
   # display powo ids for all species
   output$contents <- DT::renderDataTable({
-    values$powo_results
-  }, 
-  options = list(pageLength = 5))
+    req(values$powo_results)
+    datatable(values$powo_results,
+              options = list(pageLength = 5)) %>%
+      formatStyle("accepted",
+                  target="row",
+                  color=styleEqual(c(0), c("red")),
+                  backgroundColor=styleEqual(c(NA), c("red")))
+  })
   
   
   # display stats for least concern species
