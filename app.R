@@ -1,23 +1,7 @@
-#
-# This is a Shiny web application. You can run the application by clicking # the 'Run App' button above.
-#
+
 ### Rapid Least Concern
 ### A tool to download occurrence data from GBIF, clean for georef errors, filter on native range using POWO and download in IUCN Red List accepted format
-### Steven Bachman - Royal Botanic Gardens, Kew
-
-### this code is organised by:
-
-# 1 - libraries
-# 2 - functions
-# 3 - UI
-# 4 - Server
-
-### to do later
-# add selective rows from datatable: https://yihui.shinyapps.io/DT-rows/ to pick correct key and IPNI ID
-# https://stackoverflow.com/questions/28274584/get-selected-row-from-datatable-in-shiny-app
-# add other issues for cleaning - get from gbif table - use GBIF website format
-# useful code here: C:\R_local\LATEST\RedLeastApply
-
+### Steven Bachman & Barnaby Walker - Royal Botanic Gardens, Kew
 
 #### 1 - libraries
 library(raster)
@@ -477,18 +461,6 @@ server <- function(input, output, session) {
                  value = 2, {
                    values$statistics = calculate_statistics(powo_info$name, powo_info$IPNI_ID, values$points, values$native_range)
                  })
-  })
-  
-  # toggle native points on map
-  observeEvent(input$mymap_click, {
-    ClickVar<-input$mymap_click
-    
-    proxy = leafletProxy("mymap")
-    
-    proxy %>%
-      #clearGroup("NewPoints") %>%
-      #clearMarkers(layerId=input$mymap_click$id) %>%
-      addCircleMarkers(lng=ClickVar$lng, lat=ClickVar$lat, radius = 4, color = "green", group = "NewPoints")
   })
   
   # point file download handler
