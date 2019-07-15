@@ -98,12 +98,10 @@ ui <- fluidPage(
                                                 placeholder = "Aloe zebrina"),
 
                                       br(),
-                                      disabled(textInput("key",
-                                                         "Selected GBIF ID:")),
-                                      
-                                      br(),
-                                      disabled(textInput("powo",
-                                                         "Matching POWO ID:")),
+                                      p("Selected GBIF ID:"),
+                                      wellPanel(textOutput("key")),
+                                      p("Matching POWO ID:"),
+                                      wellPanel(textOutput("powo")),
 
                                       # Input: EOO threshold ----
                                       sliderInput("gbif_limit", "GBIF record maximum:",
@@ -425,21 +423,18 @@ server <- function(input, output, session) {
     updateSliderInput(session, "gbif_limit", value=3000)
   })
   
+  # observe for GBIF record row selection
   observe_row_selection <- observe(suspended=TRUE, {
     input$summarytab_rows_selected
     isolate({
-      gbif_key <- values$gbif_keys[input$summarytab_rows_selected, ]$usageKey
-      updateTextInput(session, "key", value=gbif_key)
-      
-      if (! is_empty(gbif_key)) {
-        gbif_name <- values$gbif_keys[values$gbif_keys$usageKey == gbif_key, ]$acceptedSpecies  
-        values$powo_results <- search_name_powo(gbif_name)
-        matching_powo <- filter(values$powo_results, accepted == TRUE)
-        matching_powo <- filter(matching_powo, name == gbif_name)
-        updateTextInput(session, "powo", value=matching_powo$IPNI_ID)
-      }
-
+      values$key <- values$gbif_keys[input$summarytab_rows_selected, ]$usageKey
     })
+  })
+  
+  # observer to prevent calculations before IDs have been selected
+  observe({
+    ids_found <- ! is_empty(values$key) & ! is_empty(values$powo)
+    toggleState(id="runSingle", condition=ids_found)
   })
   
   # request points and species info
@@ -447,30 +442,36 @@ server <- function(input, output, session) {
     
     withProgress(message = 'Getting points from GBIF...',
                  value = 2, {
-                   gbif_results = get_gbif_points(input$key, input$gbif_limit)
+                   gbif_results = get_gbif_points(values$key, input$gbif_limit)
                  })
     
     withProgress(message="Getting native range from POWO...",
                  value=2, {
-                   powo_results <- get_native_range(input$powo)
+                   powo_results <- get_native_range(values$powo)
     })
     
     values$native_range <- powo_results
     
     # add indicator for points in native range
     gbif_results <- check_if_native(gbif_results, values$native_range, TDWG_LEVEL3)
-      
+    
     # use POWO info to generate species info tables
-    input_info <- reactiveValuesToList(input)
-    input_info$author <- filter(values$powo_results, IPNI_ID == input$powo)$author
-    input_info$native_range <- values$native_range
-      
-    values$species_info <- get_species_info(input_info)
+    values$species_info <- get_species_info(list(
+      key = values$key,
+      powo = values$powo,
+      author = filter(values$powo_results, IPNI_ID == values$powo)$author,
+      native_range = values$native_range,
+      name = input$name,
+      email = input$email,
+      affiliation = input$affiliation,
+      habinput = input$habinput,
+      gfinput = input$gfinput
+    ))
 
     gbif_results$BINOMIAL = input$speciesinput
     values$points <- gbif_results
 
-    powo_info <- filter(values$powo_results, IPNI_ID == input$powo)
+    powo_info <- filter(values$powo_results, IPNI_ID == values$powo)
     
     withProgress(message = 'Calculating statistics...',
                  value = 2, {
@@ -537,6 +538,33 @@ server <- function(input, output, session) {
   )
 
   # single species display items ----
+  
+  # output selected key of GBIF record
+  output$key <- renderText({
+    shiny::validate(
+      need(input$speciesinput == "" | ! is_empty(values$key),
+           message="Please select a row from the table.")
+    )
+    
+    values$key
+  })
+  
+  # lookup and output matching POWO ID
+  output$powo <- renderText({
+    if (! is_empty(values$key)) {
+      gbif_name <- values$gbif_keys[values$gbif_keys$usageKey == values$key, ]$acceptedSpecies  
+      values$powo_results <- search_name_powo(gbif_name)
+      matching_powo <- filter(values$powo_results, accepted == TRUE)
+      matching_powo <- filter(matching_powo, name == gbif_name)
+      
+      shiny::validate(
+        need(is_empty(values$key) | nrow(matching_powo) > 0,
+             message="No accepted species found in POWO.")
+      )
+      values$powo <- matching_powo$IPNI_ID
+    }
+    values$powo
+  })
   
   #Show results of GBIF search as a table
   output$summarytab <- DT::renderDataTable({
