@@ -2,16 +2,22 @@
 
 get_accepted_name = function(name_in) {
   # lookup name in POWO
-  powo_results = search_name_powo(name_in)
-  # remove anything that wasn't the name we wanted
-  powo_results = filter(powo_results, name == name_in)
-  
-  powo_results = rename(powo_results, name_in=name)
+  powo_results <- search_name_powo(name_in)
 
-  powo_results = unite(powo_results, fullname, name_in, author, sep=" ", remove=FALSE)
-  # might error if all different names returned
-  powo_results = powo_results[1,]
+  # remove anything that wasn't the name we wanted
+  if (any(! is.na(powo_results$IPNI_ID))) {
+    powo_results <- filter(powo_results, name == name_in)
+
+    powo_results <- unite(powo_results, fullname, name, author, sep=" ", remove=FALSE)
+    
+    powo_results <- powo_results[1,]
+  }
   
+  # add on the name searched for
+  powo_results$name_searched <- name_in
+  
+  powo_results <- rename(powo_results, name_in=name)
+
   return(powo_results)
 }
 
@@ -25,7 +31,7 @@ search_name_powo = function(name_in) {
   )
 
   # use name full name to search API  
-  full_url =  paste("http://plantsoftheworldonline.org/api/1/search?q=names:", name_in, sep = "")
+  full_url =  paste("http://plantsoftheworldonline.org/api/1/search?q=name:", name_in, sep = "")
   
   # encode
   full_url = utils::URLencode(full_url)
@@ -61,19 +67,19 @@ get_native_range = function(ID){
       LEVEL3_NAM=NA_character_,
       POWO_ID=NA_character_
   )
+  
+  lookup_url <- paste("http://plantsoftheworld.online/api/2/taxon/urn:lsid:ipni.org:names:", ID, sep="")
 
-  full_url = paste0("http://plantsoftheworld.online/api/2/taxon/urn:lsid:ipni.org:names:", ID, "?fields=distribution")
+  response <- httr::GET(lookup_url, query=c(fields="distribution"))
   
-  # encode
-  full_url = utils::URLencode(full_url)
-  
-  # get raw json data
-  raw_data = readLines(full_url, warn = "F", encoding = "UTF-8")
-  
-  # organise
-  rd = fromJSON(raw_data)
-  
-  distribution = rd$distribution$natives
+  if (httr::http_error(response)) {
+    distribution <- NULL
+  } else {
+    results <- content(response, as="text")
+    results <- fromJSON(results)
+    
+    distribution <- results$distribution$natives
+  }
   
   if (! is.null(distribution)) {
     results = mutate(distribution, POWO_ID=ID)
@@ -219,7 +225,6 @@ get_gbif_points = function(key, gbif_limit) {
       taxonKey = key,
       hasGeospatialIssue = FALSE,
       hasCoordinate = TRUE,
-      #limit = 1000
       limit = gbif_limit
     )
 

@@ -382,6 +382,8 @@ ui <- fluidPage(
                           # Output: Data file ----
                           DT::dataTableOutput("contents"),
                           br(),
+                          verbatimTextOutput("powo_warnings"),
+                          br(),
                           # Output: Data file ----
                           DT::dataTableOutput("stats"),
                           verbatimTextOutput("threatvalue")
@@ -790,7 +792,8 @@ server <- function(input, output, session) {
                     select(IPNI_ID, points) %>%
                     unnest()
                  })
-
+    # TODO: Add in something here to remove things not in GBIF or POWO. Really don't want to search for anything not accepted either
+    
     withProgress(message="Getting native ranges from POWO...",
                  value=2, 
                  {
@@ -923,8 +926,22 @@ server <- function(input, output, session) {
               options = list(pageLength = 5)) %>%
       formatStyle("accepted",
                   target="row",
-                  color=styleEqual(c(0), c("red")),
-                  backgroundColor=styleEqual(c(NA), c("red")))
+                  color=styleEqual(c(0, NA), c("red", "red")))
+  })
+
+  output$powo_warnings <- renderPrint({
+    req(values$powo_results)
+    n_not_found <- sum(is.na(values$powo_results$IPNI_ID))
+    n_synonyms <- sum(! values$powo_results$accepted, na.rm=TRUE)
+    n_total <- nrow(values$powo_results)
+
+    cat(
+      sprintf("%d names searched in POWO", n_total),
+      sprintf("%d names not found", n_not_found),
+      sprintf("%d names identified as synonyms", n_synonyms),
+      "missing names and synonyms (highlighted in red above) will be ommited from all calculations",
+      sep="\n"
+    )
   })
   
   
