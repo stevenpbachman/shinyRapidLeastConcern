@@ -103,8 +103,6 @@ ui <- fluidPage(
                                       fluidRow(
                                         column(8, align="center", offset = 2,
                                                tags$h4("Enter a species:")
-                                                #tags$h4("or click '?' for a random choice:")
-                                               #actionButton("randomSpecies", "Random species!")
                                         )
                                       ),
                                       
@@ -116,12 +114,6 @@ ui <- fluidPage(
                                         column(4,actionButton("randomSpecies", "Random Species")
                                         )
                                       ),
-                                      
-                                      #textInput("speciesinput",
-                                      #          "Enter species e.g. Aloe zebrina",
-                                      #          placeholder = "Aloe zebrina"),
-                                      
-                                      #actionButton("randomSpecies", "Random species!"),
                                       
                                       p("Selected GBIF ID:"),
                                       wellPanel(textOutput("key")),
@@ -144,7 +136,6 @@ ui <- fluidPage(
                                       
                                       tags$hr(style="border-color: black;"),
 
-                                      #actionButton("runSingle", "Run analysis!"),
                                       fluidRow(
                                         column(12, align="center", 
                                                actionButton("runSingle", "Run analysis!")
@@ -166,7 +157,7 @@ ui <- fluidPage(
                                       
                                       
                                       tags$hr(style="border-color: black;"),
-                                      #tags$h5("4 Download data:"),
+                                      
                                       fluidRow(
                                         column(12, align="center", 
                                                tags$h4("Download data:")
@@ -178,19 +169,15 @@ ui <- fluidPage(
                                                downloadButton('download', "Download clean point file")
                                         )
                                       ),
-                                      #downloadButton('download', "Download clean point file"),
-                                      
+
                                       br(),
-                                 
-                                      #helpText("Download SIS Connect csv files:"),
-                                      
+   
                                       fluidRow(
                                         column(12, align="center",
                                                downloadButton('downloadSIS', "Download SIS Connect Files")
                                         )
                                       ),
-                                      #downloadButton('downloadSIS', "Download SIS Connect Files"),
-                                      
+ 
                                       br(),
                                       br(),
                                       br(),
@@ -216,7 +203,6 @@ ui <- fluidPage(
                                         condition = "input.addData % 2 == 1",selectInput(
                                           "habinput",
                                           label = ("Select habitat(s)"),
-                                          #choices = list("Tree - size unknown" = 1, "Tree - large" = 2, "Tree - small" = 3),
                                           choices = HABITAT_LOOKUP$description,
                                           selected = tail(HABITAT_LOOKUP, 1)$description,
                                           selectize = TRUE,
@@ -254,12 +240,10 @@ ui <- fluidPage(
                                       
                                       
                                       # search results from GBIF
-                                      #h5("GBIF search results:"),
                                       conditionalPanel(
                                         condition = "input.minmaxgbif % 2 == 0",DT::dataTableOutput("summarytab")
                                       ),
                                       
-                                      #h5("Plant of the World Online search results:"),
                                       conditionalPanel(
                                         condition = "input.minmaxgbif % 2 == 0",DT::dataTableOutput("powotab")
                                       ),
@@ -268,8 +252,6 @@ ui <- fluidPage(
                                       br(),
                                       
                                       actionButton("minmaxmap", "Hide/Show map ▼▲", style='padding:4px; font-size:80%'),
-                                      
-                                      #h5("Distribution map: "),
                                       
                                       checkboxInput("native", "Hide non-native points", FALSE),
                                       h5("* Note that only native points will be used in analysis"),
