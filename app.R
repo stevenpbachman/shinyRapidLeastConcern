@@ -34,10 +34,6 @@ source(here("R/file_functions.R"))
 #### 3 - UI---------------
 ui <- fluidPage(
   useShinyjs(),
-<<<<<<< HEAD
-=======
-  
->>>>>>> added checks in batch to stop early analysis or calculation
   # set themes
   theme = shinythemes::shinytheme("simplex"),
   
@@ -82,25 +78,12 @@ ui <- fluidPage(
                                       fluidRow(
                                         column(8, align="center", offset = 2,
                                                tags$h4("Enter species")
-                                               #actionButton("randomSpecies", "Random species!")
                                         )
                                       ),
-                                      
-                                      #fluidRow(
-                                      #  column(4, 
-                                      #         textInput("speciesinput", label = "Enter species",
-                                      #                   placeholder = "Aloe zebrina")
-                                      #         ),
-                                      #  column(4, offset = 2,
-                                      #         actionButton("randomSpecies", "Random")
-                                      #  )
-                                      #),
                                       
                                       textInput("speciesinput",
                                                 "Enter species e.g. Aloe zebrina",
                                                 placeholder = "Aloe zebrina"),
-                                      
-                                      #actionButton("randomSpecies", "Random species!"),
                                       
                                       p("Selected GBIF ID:"),
                                       wellPanel(textOutput("key")),
@@ -124,14 +107,13 @@ ui <- fluidPage(
                                       checkboxInput("native", "Remove non-native points", FALSE),
                                       
                                       tags$hr(style="border-color: black;"),
-                                      #tags$h5("3 Run analysis:"),
+
                                       fluidRow(
                                         column(8, align="center", offset = 2,
                                                tags$h4("Run analysis:")
                                         )
                                       ),
                                       
-                                      #actionButton("runSingle", "Run analysis!"),
                                       fluidRow(
                                         column(8, align="center", offset = 2,
                                                actionButton("runSingle", "Run analysis!")
@@ -144,7 +126,7 @@ ui <- fluidPage(
                                       Check the map and statistics. As a guideline, gauges in green indicate high probability of being Least Concern, red indicates possibly threatened. If you think you have an LC species, download the point file and SIS connect files"),
                                       
                                       tags$hr(style="border-color: black;"),
-                                      #tags$h5("4 Download data:"),
+
                                       fluidRow(
                                         column(8, align="center", offset = 2,
                                                tags$h4("Download data:")
@@ -156,18 +138,15 @@ ui <- fluidPage(
                                                downloadButton('download', "Download clean point file")
                                         )
                                       ),
-                                      #downloadButton('download', "Download clean point file"),
                                       
                                       br(),
-                                 
-                                      #helpText("Download SIS Connect csv files:"),
                                       
                                       fluidRow(
                                         column(8, align="center", offset = 2,
                                                downloadButton('downloadSIS', "Download SIS Connect Files")
                                         )
                                       ),
-                                      #downloadButton('downloadSIS', "Download SIS Connect Files"),
+
                                       
                                       br(),
                                       br(),
@@ -194,7 +173,6 @@ ui <- fluidPage(
                                         condition = "input.addData % 2 == 1",selectInput(
                                           "habinput",
                                           label = ("Select habitat(s)"),
-                                          #choices = list("Tree - size unknown" = 1, "Tree - large" = 2, "Tree - small" = 3),
                                           choices = HABITAT_LOOKUP$description,
                                           selected = tail(HABITAT_LOOKUP, 1)$description,
                                           selectize = TRUE,
@@ -227,9 +205,7 @@ ui <- fluidPage(
                                       
                                       # Output: Header + summary of distribution ----
                                       actionButton("minmaxgbif", "Hide/Show search results ▼▲", style='padding:4px; font-size:80%'),
-                                      
                                       br(),
-                                      
                                       
                                       # search results from GBIF
                                       h5("GBIF search results:"),
@@ -237,7 +213,6 @@ ui <- fluidPage(
                                         condition = "input.minmaxgbif % 2 == 0",DT::dataTableOutput("summarytab")
                                       ),
                                       
-                                      #h5("Plant of the World Online search results:"),
                                       conditionalPanel(
                                         condition = "input.minmaxgbif % 2 == 0",DT::dataTableOutput("powotab")
                                       ),
@@ -265,31 +240,19 @@ ui <- fluidPage(
                                         
                                         dashboardBody(
                                           fluidRow(
-                                            
-                                            
                                             box(flexdashboard::gaugeOutput("plt1"),width=3,background ="green" ),
-                                            
                                             box(flexdashboard::gaugeOutput("plt2"),width=3,background ="green" ),
-                                            
                                             box(flexdashboard::gaugeOutput("plt3"),width=3,background ="green" ),
-                                            
                                             box(flexdashboard::gaugeOutput("plt4"),width=3,background ="green" )
-                                            
                                           )
-                                          
                                         )
-                                        
-                                        ),
-                                    
-                             
+                                      ),
 
-                                      
                                       actionButton("minmaxSIS", "Hide/Show SIS tables ▼▲", style='padding:4px; font-size:80%'),
                                       
                                       br(),
                                       conditionalPanel(
                                         condition = "input.minmaxSIS % 2 == 0",
-                                        
                                         tabsetPanel(type = "tabs",
                                                     tabPanel("Point table", DT::dataTableOutput("pointstab")),
                                                     tabPanel("Allfields", DT::dataTableOutput("outallf")),
@@ -302,18 +265,14 @@ ui <- fluidPage(
                                                     
                                         )
                                       ),
-
                                       br(),
                                       br(),
                                       br(),
                                       br(),
                                       br()
-                                      
                                     )
                       )
-              
              ),
-             
 
              # batch option - user needs to load in list of species names as binomials under column: 'name_in' 
              tabPanel("2 Batch",
@@ -401,13 +360,9 @@ ui <- fluidPage(
                       
              ),
                         
-             tabPanel("3 Batch - user points"
-                      #includeHTML("README.html")
-             ),
+             tabPanel("3 Batch - user points"),
              
-             tabPanel("Help"
-                      #, includeHTML("README.html")
-             )
+             tabPanel("Help")
     )
 )
 
@@ -520,6 +475,13 @@ server <- function(input, output, session) {
                  value = 2, {
                    values$statistics = calculate_statistics(powo_info$name, powo_info$IPNI_ID, values$points, values$native_range)
                  })
+    
+  })
+  
+  # observer to prevent points being downloaded before they're ready
+  observe({
+    points_ready <- ! is_empty(values$points)
+    toggleState(id="download", points_ready)
   })
   
   # point file download handler
@@ -538,6 +500,12 @@ server <- function(input, output, session) {
     }
   )
   
+  # observer to prevent SIS download before it's ready
+  observe({
+    sis_ready <- ! is_empty(values$points) & ! is_empty(values$statistics)
+    toggleState(id="downloadSIS", sis_ready)
+  })
+  
   # SIS zip file download handler
   output$downloadSIS = downloadHandler(
     filename = function(){
@@ -549,10 +517,17 @@ server <- function(input, output, session) {
       zip_folder = here("data/singlezip")
       
       # update species info tables
-      input_info <- reactiveValuesToList(input)
-      input_info$author <- filter(values$powo_results, IPNI_ID == input$powo)$author
-      input_info$native_range <- values$native_range
-      values$species_info <- get_species_info(input_info)
+      values$species_info <- get_species_info(list(
+        key = values$key,
+        powo = values$powo,
+        author = filter(values$powo_results, IPNI_ID == values$powo)$author,
+        native_range = values$native_range,
+        name = input$name,
+        email = input$email,
+        affiliation = input$affiliation,
+        habinput = input$habinput,
+        gfinput = input$gfinput
+      ))
       
       prepare_sis_files(values$species_info, zip_folder=zip_folder)
       
@@ -646,7 +621,6 @@ server <- function(input, output, session) {
                        options = providerTileOptions(noWrap = TRUE)) %>%
     # Layers control
     addLayersControl(
-      #baseGroups = c("points", "poly"),
       overlayGroups = c("Points", "Native range"),
       options = layersControlOptions(collapsed = FALSE)
     )
