@@ -1,23 +1,7 @@
-#
-# This is a Shiny web application. You can run the application by clicking # the 'Run App' button above.
-#
+
 ### Rapid Least Concern
 ### A tool to download occurrence data from GBIF, clean for georef errors, filter on native range using POWO and download in IUCN Red List accepted format
-### Steven Bachman - Royal Botanic Gardens, Kew
-
-### this code is organised by:
-
-# 1 - libraries
-# 2 - functions
-# 3 - UI
-# 4 - Server
-
-### to do later
-# add selective rows from datatable: https://yihui.shinyapps.io/DT-rows/ to pick correct key and IPNI ID
-# https://stackoverflow.com/questions/28274584/get-selected-row-from-datatable-in-shiny-app
-# add other issues for cleaning - get from gbif table - use GBIF website format
-# useful code here: C:\R_local\LATEST\RedLeastApply
-
+### Steven Bachman & Barnaby Walker - Royal Botanic Gardens, Kew
 
 #### 1 - libraries
 library(raster)
@@ -49,7 +33,7 @@ source(here("R/file_functions.R"))
 
 #### 3 - UI---------------
 ui <- fluidPage(
-  
+  useShinyjs(),
   # set themes
   theme = shinythemes::shinytheme("simplex"),
   
@@ -90,23 +74,28 @@ ui <- fluidPage(
                                     sidebarPanel(
                                       actionButton("resetSingleForm", "Clear form!"),
                                       actionButton("randomSpecies", "Random species!"),
-                                      br(),
-                                      br(),
+  
+                                      fluidRow(
+                                        column(8, align="center", offset = 2,
+                                               tags$h4("Enter species")
+                                        )
+                                      ),
                                       
                                       textInput("speciesinput",
-                                                "1 Enter species e.g. Aloe zebrina",
+                                                "Enter species e.g. Aloe zebrina",
                                                 placeholder = "Aloe zebrina"),
+                                      
+                                      p("Selected GBIF ID:"),
+                                      wellPanel(textOutput("key")),
+                                      p("Matching POWO ID:"),
+                                      wellPanel(textOutput("powo")),
 
-                                      br(),
-                                      
-                                      textInput("key",
-                                                "2 Enter 'usageKey' from GBIF search results to map points:"
-                                      ),
-                                      
-                                      br(),
-                                      textInput("powo",
-                                                "3 Enter IPNI_ID from POWO search results to get native range:"
-                                      ),
+                                      tags$hr(style="border-color: black;"),
+                                      fluidRow(
+                                        column(8, align="center", offset = 2,
+                                               tags$h4("Set parameters:")
+                                         )
+                                        ),
                                       
                                       # Input: EOO threshold ----
                                       sliderInput("gbif_limit", "GBIF record maximum:",
@@ -117,20 +106,60 @@ ui <- fluidPage(
                                       
                                       checkboxInput("native", "Remove non-native points", FALSE),
                                       
-                                      actionButton("getPoints", "4 Map >>"),
+                                      tags$hr(style="border-color: black;"),
+
+                                      fluidRow(
+                                        column(8, align="center", offset = 2,
+                                               tags$h4("Run analysis:")
+                                        )
+                                      ),
                                       
-                                      actionButton('getSingleStats', "5 Get statistics >>"),
+                                      fluidRow(
+                                        column(8, align="center", offset = 2,
+                                               actionButton("runSingle", "Run analysis!")
+                                        )
+                                      ),
                                       
+                                      br(),
+                                     
+                                      tags$blockquote("
+                                      Check the map and statistics. As a guideline, gauges in green indicate high probability of being Least Concern, red indicates possibly threatened. If you think you have an LC species, download the point file and SIS connect files"),
+                                      
+                                      tags$hr(style="border-color: black;"),
+
+                                      fluidRow(
+                                        column(8, align="center", offset = 2,
+                                               tags$h4("Download data:")
+                                        )
+                                      ),
+                                      
+                                      fluidRow(
+                                        column(8, align="center", offset = 2,
+                                               downloadButton('download', "Download clean point file")
+                                        )
+                                      ),
+                                      
+                                      br(),
+                                      
+                                      fluidRow(
+                                        column(8, align="center", offset = 2,
+                                               downloadButton('downloadSIS', "Download SIS Connect Files")
+                                        )
+                                      ),
+
+                                      
+                                      br(),
+                                      br(),
                                       br(),
                                       br(),
                                       
                                       # extra data that can't be generated automatically - ask user to input or select
-                                      actionButton("addData", "6 Enter Additional Data ▼▲", style='padding:4px; font-size:80%'),
+                                      actionButton("addData", "Enter Additional Data ▼▲", style='padding:4px; font-size:80%'),
                                       
                                       br(),
                                       
                                       conditionalPanel(
-                                        condition = "input.addData % 2 == 0",selectInput(
+                                        condition = "input.addData % 2 == 1",selectInput(
                                           "gfinput",
                                           label = ("Select growth form(s)"),
                                           choices = GROWTHFORM_LOOKUP$description,
@@ -141,10 +170,9 @@ ui <- fluidPage(
                                       ),
                                       
                                       conditionalPanel(
-                                        condition = "input.addData % 2 == 0",selectInput(
+                                        condition = "input.addData % 2 == 1",selectInput(
                                           "habinput",
                                           label = ("Select habitat(s)"),
-                                          #choices = list("Tree - size unknown" = 1, "Tree - large" = 2, "Tree - small" = 3),
                                           choices = HABITAT_LOOKUP$description,
                                           selected = tail(HABITAT_LOOKUP, 1)$description,
                                           selectize = TRUE,
@@ -153,44 +181,23 @@ ui <- fluidPage(
                                       ),
                                       
                                       conditionalPanel(
-                                        condition = "input.addData % 2 == 0",textInput("name",
+                                        condition = "input.addData % 2 == 1",textInput("name",
                                                                                        "Enter name of assessor/compiler:",
                                                                                        placeholder = "John Smith")
                                       ),
                                       
                                       conditionalPanel(
-                                        condition = "input.addData % 2 == 0",textInput("email",
-                                                                                      "Enter email of assessor/compiler:",
-                                                                                      placeholder = "j.smith@email.com")
+                                        condition = "input.addData % 2 == 1",textInput("email",
+                                                                                       "Enter email of assessor/compiler:",
+                                                                                       placeholder = "j.smith@email.com")
                                       ),
                                       
                                       conditionalPanel(
-                                        condition = "input.addData % 2 == 0",textInput("affiliation",
+                                        condition = "input.addData % 2 == 1",textInput("affiliation",
                                                                                        "Affiliation of assessor/compiler:",
                                                                                        placeholder = "my institution")
-                                      ),
-                                      #helpText("4. Enter additional data for Habitat and Plant growth form:"),
-                                      #tags$h5("4. Enter additional data"),
-                                      
-  
-                                      br(),
-                                      
-                                      #helpText("Download spatial point file:"),
-                                      
-                                      tags$blockquote("
-                                      Check the map and statistics. As a guideline, gauges in green indicate high probability of being Least Concern, red indicates possibly threatened. If you think you have an LC species, download the point file and SIS connect files"),
-                                      
-                                      tags$h5("7 Download data:"),
-                                      
-                                      downloadButton('download', "Download clean point file"),
-                                      
-                                      br(),
-                                 
-                                      helpText("Download SIS Connect csv files:"),
-                                      
-                                      downloadButton('downloadSIS', "Download SIS Connect Files")
-                                                   
-                                      
+                                      )
+ 
                                     ),
                                     
                                     # Show the results of the name search against GBIF and POWO
@@ -198,9 +205,7 @@ ui <- fluidPage(
                                       
                                       # Output: Header + summary of distribution ----
                                       actionButton("minmaxgbif", "Hide/Show search results ▼▲", style='padding:4px; font-size:80%'),
-                                      
                                       br(),
-                                      
                                       
                                       # search results from GBIF
                                       h5("GBIF search results:"),
@@ -208,7 +213,6 @@ ui <- fluidPage(
                                         condition = "input.minmaxgbif % 2 == 0",DT::dataTableOutput("summarytab")
                                       ),
                                       
-                                      h5("Plant of the World Online search results:"),
                                       conditionalPanel(
                                         condition = "input.minmaxgbif % 2 == 0",DT::dataTableOutput("powotab")
                                       ),
@@ -236,31 +240,19 @@ ui <- fluidPage(
                                         
                                         dashboardBody(
                                           fluidRow(
-                                            
-                                            
                                             box(flexdashboard::gaugeOutput("plt1"),width=3,background ="green" ),
-                                            
                                             box(flexdashboard::gaugeOutput("plt2"),width=3,background ="green" ),
-                                            
                                             box(flexdashboard::gaugeOutput("plt3"),width=3,background ="green" ),
-                                            
                                             box(flexdashboard::gaugeOutput("plt4"),width=3,background ="green" )
-                                            
                                           )
-                                          
                                         )
-                                        
-                                        ),
-                                    
-                             
+                                      ),
 
-                                      
                                       actionButton("minmaxSIS", "Hide/Show SIS tables ▼▲", style='padding:4px; font-size:80%'),
                                       
                                       br(),
                                       conditionalPanel(
                                         condition = "input.minmaxSIS % 2 == 0",
-                                        
                                         tabsetPanel(type = "tabs",
                                                     tabPanel("Point table", DT::dataTableOutput("pointstab")),
                                                     tabPanel("Allfields", DT::dataTableOutput("outallf")),
@@ -273,32 +265,32 @@ ui <- fluidPage(
                                                     
                                         )
                                       ),
-
                                       br(),
                                       br(),
                                       br(),
                                       br(),
                                       br()
-                                      
                                     )
                       )
-              
              ),
-             
 
              # batch option - user needs to load in list of species names as binomials under column: 'name_in' 
              tabPanel("2 Batch",
 
                       sidebarPanel(
-                        actionButton("resetBatchForm", "Clear upload!"),
+                        fluidRow(
+                          column(9, p("Upload a list of names from a CSV file. One field must be called 'name_in' and should contain binomials e.g. 'Poa annua'"))
+                        ),
+                        fluidRow(
+                          column(9, fileInput("file1", NULL,
+                                              multiple = FALSE,
+                                              accept = (".csv")
+                          )),
+                          column(3, actionButton("resetBatchForm", "Clear upload!"))
+                          
+                        ),
                         br(),
-                        br(),
-                        fileInput("file1", "Upload a list of names from a CSV file. One field must be called 'name_in' and should contain binomials e.g. 'Poa annua'",
-                                multiple = FALSE,
-                                accept = (".csv")
-                                ),
-                        downloadButton('getcleantab', "Download table"),
-                        helpText("Check for any problematic names and if necessary reload a table with a clean list of names"),
+
                         
                         # Input: EOO threshold ----
                         sliderInput("gbif_batch_limit", "GBIF record maximum:",
@@ -309,18 +301,12 @@ ui <- fluidPage(
                         
                         br(),
 
-                        helpText("Click 'Get statistics' for range metrics such as EOO and AOO"),
+                        p("Click 'Get statistics' for range metrics such as EOO and AOO"),
                         
                         actionButton('getStats', "Get statistics"),
                         br(),
                         br(),
-                        helpText("Adjust thresholds to determine Least Concern"),
-                        
-                        # Input: Threat reminder
-                         
-                        checkboxInput("threatvalue", label = "No observed, estimated, projected, inferred, or suspected declines likely 
-                                       to trigger criteria A, B, C, D or E." , value = TRUE),
-                        
+                        p("Adjust thresholds to determine Least Concern"),
                         
                         # Input: EOO threshold ----
                         sliderInput("eoo", "Extent of Occurrence (EOO):",
@@ -346,6 +332,11 @@ ui <- fluidPage(
                         actionButton("resetBatchSliders", "Reset Values!"),
                         br(),
                         
+                        # Input: Threat reminder
+                        
+                        checkboxInput("threatvalue", label = "No observed, estimated, projected, inferred, or suspected declines likely 
+                                       to trigger criteria A, B, C, D or E." , value = FALSE),
+                        
                         helpText("Click to download SIS Connect and point files:"),
                         
                         downloadButton('downloadbatch', "Download SIS Connect Files")
@@ -357,21 +348,21 @@ ui <- fluidPage(
                           # Output: Data file ----
                           DT::dataTableOutput("contents"),
                           br(),
+                          verbatimTextOutput("powo_warnings"),
+                          br(),
                           # Output: Data file ----
                           DT::dataTableOutput("stats"),
-                          verbatimTextOutput("threatvalue")
+                          verbatimTextOutput("threatvalue"),
+                          verbatimTextOutput("stats_warnings"),
+                          br()
                           
                         )
                       
              ),
                         
-             tabPanel("3 Batch - user points"
-                      #includeHTML("README.html")
-             ),
+             tabPanel("3 Batch - user points"),
              
-             tabPanel("Help"
-                      #, includeHTML("README.html")
-             )
+             tabPanel("Help")
     )
 )
 
@@ -430,57 +421,67 @@ server <- function(input, output, session) {
     updateSliderInput(session, "gbif_limit", value=3000)
   })
   
-  # request points and species info
-  observeEvent(input$getPoints, {
-    
-    withProgress(message = 'Querying GBIF...',
-                 value = 2, {
-                   gbif_results = get_gbif_points(input$key, input$gbif_limit)
-                 })
-    
-    if (input$powo != "") {
-      # get native range from POWO
-      powo_results <- get_native_range(input$powo)
-      values$native_range <- powo_results
-      
-      # add indicator for points in native range
-      gbif_results <- check_if_native(gbif_results, values$native_range, TDWG_LEVEL3)
-      
-      # use POWO info to generate species info tables
-      input_info <- reactiveValuesToList(input)
-      input_info$author <- filter(values$powo_results, IPNI_ID == input$powo)$author
-      input_info$native_range <- values$native_range
-      
-      values$species_info <- get_species_info(input_info)
-    }
-    gbif_results$BINOMIAL = input$speciesinput
-    values$points <- gbif_results
+  # observe for GBIF record row selection
+  observe_row_selection <- observe(suspended=TRUE, {
+    input$summarytab_rows_selected
+    isolate({
+      values$key <- values$gbif_keys[input$summarytab_rows_selected, ]$usageKey
+    })
   })
   
-  # calculate summary statistics
-  observeEvent(input$getSingleStats, {
-    if (! input$powo %in% values$powo_results) {
-      values$powo_results = search_name_powo(input$speciesinput)
-    }
+  # observer to prevent calculations before IDs have been selected
+  observe({
+    ids_found <- ! is_empty(values$key) & ! is_empty(values$powo)
+    toggleState(id="runSingle", condition=ids_found)
+  })
+  
+  # request points and species info
+  observeEvent(input$runSingle, {
     
-    powo_info <- filter(values$powo_results, IPNI_ID == input$powo)
+    withProgress(message = 'Getting points from GBIF...',
+                 value = 2, {
+                   gbif_results = get_gbif_points(values$key, input$gbif_limit)
+                 })
+    
+    withProgress(message="Getting native range from POWO...",
+                 value=2, {
+                   powo_results <- get_native_range(values$powo)
+    })
+    
+    values$native_range <- powo_results
+    
+    # add indicator for points in native range
+    gbif_results <- check_if_native(gbif_results, values$native_range, TDWG_LEVEL3)
+    
+    # use POWO info to generate species info tables
+    values$species_info <- get_species_info(list(
+      key = values$key,
+      powo = values$powo,
+      author = filter(values$powo_results, IPNI_ID == values$powo)$author,
+      native_range = values$native_range,
+      name = input$name,
+      email = input$email,
+      affiliation = input$affiliation,
+      habinput = input$habinput,
+      gfinput = input$gfinput
+    ))
+
+    gbif_results$BINOMIAL = input$speciesinput
+    values$points <- gbif_results
+
+    powo_info <- filter(values$powo_results, IPNI_ID == values$powo)
     
     withProgress(message = 'Calculating statistics...',
                  value = 2, {
                    values$statistics = calculate_statistics(powo_info$name, powo_info$IPNI_ID, values$points, values$native_range)
                  })
+    
   })
   
-  # toggle native points on map
-  observeEvent(input$mymap_click, {
-    ClickVar<-input$mymap_click
-    
-    proxy = leafletProxy("mymap")
-    
-    proxy %>%
-      #clearGroup("NewPoints") %>%
-      #clearMarkers(layerId=input$mymap_click$id) %>%
-      addCircleMarkers(lng=ClickVar$lng, lat=ClickVar$lat, radius = 4, color = "green", group = "NewPoints")
+  # observer to prevent points being downloaded before they're ready
+  observe({
+    points_ready <- ! is_empty(values$points)
+    toggleState(id="download", points_ready)
   })
   
   # point file download handler
@@ -499,6 +500,12 @@ server <- function(input, output, session) {
     }
   )
   
+  # observer to prevent SIS download before it's ready
+  observe({
+    sis_ready <- ! is_empty(values$points) & ! is_empty(values$statistics)
+    toggleState(id="downloadSIS", sis_ready)
+  })
+  
   # SIS zip file download handler
   output$downloadSIS = downloadHandler(
     filename = function(){
@@ -510,10 +517,17 @@ server <- function(input, output, session) {
       zip_folder = here("data/singlezip")
       
       # update species info tables
-      input_info <- reactiveValuesToList(input)
-      input_info$author <- filter(values$powo_results, IPNI_ID == input$powo)$author
-      input_info$native_range <- values$native_range
-      values$species_info <- get_species_info(input_info)
+      values$species_info <- get_species_info(list(
+        key = values$key,
+        powo = values$powo,
+        author = filter(values$powo_results, IPNI_ID == values$powo)$author,
+        native_range = values$native_range,
+        name = input$name,
+        email = input$email,
+        affiliation = input$affiliation,
+        habinput = input$habinput,
+        gfinput = input$gfinput
+      ))
       
       prepare_sis_files(values$species_info, zip_folder=zip_folder)
       
@@ -531,20 +545,43 @@ server <- function(input, output, session) {
 
   # single species display items ----
   
+  # output selected key of GBIF record
+  output$key <- renderText({
+    shiny::validate(
+      need(input$speciesinput == "" | ! is_empty(values$key),
+           message="Please select a row from the table.")
+    )
+    
+    values$key
+  })
+  
+  # lookup and output matching POWO ID
+  output$powo <- renderText({
+    if (! is_empty(values$key)) {
+      gbif_name <- values$gbif_keys[values$gbif_keys$usageKey == values$key, ]$acceptedSpecies  
+      values$powo_results <- search_name_powo(gbif_name)
+      matching_powo <- filter(values$powo_results, accepted == TRUE)
+      matching_powo <- filter(matching_powo, name == gbif_name)
+      
+      shiny::validate(
+        need(is_empty(values$key) | nrow(matching_powo) > 0,
+             message="No accepted species found in POWO.")
+      )
+      values$powo <- matching_powo$IPNI_ID
+    }
+    values$powo
+  })
+  
   #Show results of GBIF search as a table
   output$summarytab <- DT::renderDataTable({
     req(input$speciesinput)
-    search_name_gbif(input$speciesinput)
+    values$gbif_keys <- search_name_gbif(input$speciesinput)
+    observe_row_selection$resume()
+    values$gbif_keys
   },
-  options = list(pageLength = 5))
-  
-  # Show results of powo search as a table
-  output$powotab <- DT::renderDataTable({
-    req(input$speciesinput)
-    values$powo_results = search_name_powo(input$speciesinput)
-    values$powo_results
-  },
-  options = list(pageLength = 5))
+  options = list(pageLength = 5),
+  selection="single",
+  server=TRUE)
   
   # leaflet map to show points
   output$mymap <- renderLeaflet({
@@ -557,7 +594,7 @@ server <- function(input, output, session) {
       df <- filter(df, ! is.na(native_range))
     }
     
-    sptdwg = merge(TDWG_LEVEL3, values$native_range)
+    range_shapes <- filter(TDWG_LEVEL3, LEVEL3_COD %in% values$native_range$LEVEL3_COD)
     
     leaflet(data = df) %>%
       addMapPane("points", zIndex = 420) %>%
@@ -574,7 +611,7 @@ server <- function(input, output, session) {
                        options = pathOptions(pane = "points")) %>%
       # maybe add an IF here to control whether native range is mapped
       addPolygons(group = "Native range",
-                  data=sptdwg, 
+                  data=range_shapes, 
                   color = "red", 
                   weight = 1, 
                   fillColor = "red", 
@@ -584,7 +621,6 @@ server <- function(input, output, session) {
                        options = providerTileOptions(noWrap = TRUE)) %>%
     # Layers control
     addLayersControl(
-      #baseGroups = c("points", "poly"),
       overlayGroups = c("Points", "Native range"),
       options = layersControlOptions(collapsed = FALSE)
     )
@@ -705,47 +741,61 @@ server <- function(input, output, session) {
                  })
   })
   
-  # powo info download handler
-  output$getcleantab = downloadHandler(
-    # download the checked names table
-    filename = function(){
-      date <- format(Sys.Date(), "%Y%m%d")
-      paste("checked_names_", date, ".csv", sep = "" )
-    },
-    content = function(file){
-      write_csv(values$powo_results, file)
-    }
-  )
+  # observer to prevent calculations before species have been uploaded
+  observe({
+    species_uploaded <- ! is_empty(values$powo_results)
+    toggleState(id="getStats", condition=species_uploaded)
+  })
   
   # calculate statistics and get info for all species
   observeEvent(input$getStats, {
+    # TODO: clean up how this works with warnings and missing values
     withProgress(message="Getting GBIF reference keys...",
                  value=2, 
                  {
-                   values$gbif_keys <- 
+                   accepted_species <- 
                     values$powo_results %>%
-                    select(IPNI_ID, name_in) %>%
+                    filter(! is.na(IPNI_ID), accepted) %>%
+                    select(IPNI_ID, name_in, name_searched) %>%
                     mutate(gbif_results=map(name_in, get_gbif_key)) %>%
                     unnest()
+                   
+                   missing_species <-
+                     values$powo_results %>%
+                     filter(is.na(IPNI_ID) | ! accepted) %>%
+                     mutate(gbif_key=NA_character_,
+                            warning=case_when(is.na(IPNI_ID) ~ "No matching name found in POWO",
+                                              ! accepted ~ "Not an accepted species in POWO",
+                                              TRUE ~ NA_character_)) %>%
+                     select(IPNI_ID, name_in, name_searched, gbif_key, warning)
+                   
+                   values$gbif_keys <- bind_rows(accepted_species, missing_species)
+                   
                  })
-  
+    
     # this could grind things to a halt with too many species/points
+    
     withProgress(message="Getting points from GBIF...",
                  value=2, 
                  {
                    values$points <-
                     values$gbif_keys %>%
                     mutate(points=map(gbif_key, get_gbif_points, input$gbif_batch_limit)) %>%
-                    select(IPNI_ID, points) %>%
+                    select(IPNI_ID, points, name_searched) %>%
                     unnest()
                  })
-
+    
     withProgress(message="Getting native ranges from POWO...",
                  value=2, 
                  {
-                   values$native_range <- map_dfr(values$powo_results$IPNI_ID, get_native_range)
+                   # only want to search for native range for things we have an ID for
+                   filtered_powo <-
+                     values$powo_results %>%
+                     filter(! is.na(IPNI_ID), accepted)
+                   
+                   values$native_range <- map_dfr(filtered_powo$IPNI_ID, get_native_range)
                  })
-
+    
     nested_native_range <- 
       values$native_range %>% 
       group_by(POWO_ID) %>% 
@@ -764,21 +814,26 @@ server <- function(input, output, session) {
                     unnest(points)
                  })
     
-
     withProgress(message="Calculating least concern statistics...",
                  value=2,
                  {
                    values$statistics <-
-                    values$points %>%
-                    group_by(IPNI_ID) %>%
-                    nest() %>%
-                    left_join(values$gbif_keys, by="IPNI_ID") %>%
+                     values$points %>%
+                     group_by(name_searched, IPNI_ID) %>%
+                     nest() %>%
+                     left_join(values$gbif_keys, by=c("IPNI_ID", "name_searched")) %>%
                      left_join(nested_native_range, by=c("IPNI_ID"="POWO_ID")) %>%
                      mutate(statistics=pmap(list(name_in, IPNI_ID, data, native_tdwg, warning), 
-                                           calculate_statistics)) %>%
-                    select(statistics) %>%
-                    unnest()
+                                            calculate_statistics)) %>%
+                     select(name_searched, statistics) %>%
+                     unnest()
                  })    
+  })
+  
+  # observer to prevent download before calculations done and threat statement checked
+  observe({
+    download_ready <- ! is_empty(values$statistics) & input$threatvalue
+    toggleState(id="downloadbatch", download_ready)
   })
   
   # batch species zip file download handler
@@ -843,13 +898,10 @@ server <- function(input, output, session) {
   # batch species reactive events ----
 
   output$threatvalue<- renderPrint({ 
-    if ((input$threatvalue) == TRUE) {
-      invisible(input$threatvalue)
-    } else {
-      print("WARNING - please consider possible threats (past, present, future) that could cause declines and trigger criteria A, B, C, D, or E.")
+    if (! input$threatvalue & ! is_empty(values$statistics)) {
+      cat("WARNING - please consider possible threats (past, present, future) that could cause declines and trigger criteria A, B, C, D, or E.")
     }
-    
-    })
+  })
   eooValue <- reactive({
     input$eoo
   })
@@ -867,23 +919,68 @@ server <- function(input, output, session) {
   
   # display powo ids for all species
   output$contents <- DT::renderDataTable({
-    values$powo_results
-  }, 
-  options = list(pageLength = 5))
+    req(values$powo_results)
+    datatable(values$powo_results,
+              options = list(pageLength = 5)) %>%
+      formatStyle("accepted",
+                  target="row",
+                  color=styleEqual(c(0, NA), c("red", "red")))
+  })
+
+  output$powo_warnings <- renderPrint({
+    req(values$powo_results)
+    n_not_found <- sum(is.na(values$powo_results$IPNI_ID))
+    n_synonyms <- sum(! values$powo_results$accepted, na.rm=TRUE)
+    n_total <- nrow(values$powo_results)
+
+    cat(
+      sprintf("%d names searched in POWO", n_total),
+      sprintf("%d names not found", n_not_found),
+      sprintf("%d names identified as synonyms", n_synonyms),
+      "missing names and synonyms (highlighted in red above) will be ommited from all calculations",
+      sep="\n"
+    )
+  })
   
   
   # display stats for least concern species
   output$stats <- DT::renderDataTable({
-    if (! is.null(values$statistics)) {
-      filter(values$statistics,
-             EOO >= eooValue(),
-             AOO >= aooValue(),
-             RecordCount >= recordsValue(),
-             TDWGCount >= tdwgValue())
-      }
       
-    }, 
-    options = list(pageLength = 5))
+      req(values$statistics)
+      
+      values$statistics <- mutate(values$statistics,
+                                  leastConcern=EOO >= eooValue() & 
+                                    AOO >= aooValue() & 
+                                    RecordCount >= recordsValue() & 
+                                    TDWGCount >= tdwgValue())
+      
+      values$statistics <- arrange(values$statistics, desc(leastConcern))
+    
+      datatable(values$statistics,
+                options=list(pageLength=5)) %>%
+        formatStyle("leastConcern",
+                    target="row",
+                    color=styleEqual(c(1, NA), c("green", "red")))
+    })
+  
+  output$stats_warnings <- renderPrint({
+    req(values$statistics)
+    
+    if ("leastConcern" %in% colnames(values$statistics)) {
+      n_least_concern <- sum(values$statistics$leastConcern, na.rm=TRUE)
+      n_warnings <- sum(is.na(values$statistics$leastConcern))
+      n_total <- nrow(values$statistics)
+      
+      cat(
+        sprintf("%d species considered", n_total),
+        sprintf("%d with warnings", n_warnings),
+        sprintf("%d identified as least concern", n_least_concern),
+        "only information about species identified as least concern will be included in the SIS Connect files.",
+        sep="\n"
+      )  
+    }
+    
+  })
 
 }  
 
