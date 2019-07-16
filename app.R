@@ -34,6 +34,10 @@ source(here("R/file_functions.R"))
 #### 3 - UI---------------
 ui <- fluidPage(
   useShinyjs(),
+<<<<<<< HEAD
+=======
+  
+>>>>>>> added checks in batch to stop early analysis or calculation
   # set themes
   theme = shinythemes::shinytheme("simplex"),
   
@@ -315,15 +319,19 @@ ui <- fluidPage(
              tabPanel("2 Batch",
 
                       sidebarPanel(
-                        actionButton("resetBatchForm", "Clear upload!"),
+                        fluidRow(
+                          column(9, p("Upload a list of names from a CSV file. One field must be called 'name_in' and should contain binomials e.g. 'Poa annua'"))
+                        ),
+                        fluidRow(
+                          column(9, fileInput("file1", NULL,
+                                              multiple = FALSE,
+                                              accept = (".csv")
+                          )),
+                          column(3, actionButton("resetBatchForm", "Clear upload!"))
+                          
+                        ),
                         br(),
-                        br(),
-                        fileInput("file1", "Upload a list of names from a CSV file. One field must be called 'name_in' and should contain binomials e.g. 'Poa annua'",
-                                multiple = FALSE,
-                                accept = (".csv")
-                                ),
-                        downloadButton('getcleantab', "Download table"),
-                        helpText("Check for any problematic names and if necessary reload a table with a clean list of names"),
+
                         
                         # Input: EOO threshold ----
                         sliderInput("gbif_batch_limit", "GBIF record maximum:",
@@ -334,18 +342,12 @@ ui <- fluidPage(
                         
                         br(),
 
-                        helpText("Click 'Get statistics' for range metrics such as EOO and AOO"),
+                        p("Click 'Get statistics' for range metrics such as EOO and AOO"),
                         
                         actionButton('getStats', "Get statistics"),
                         br(),
                         br(),
-                        helpText("Adjust thresholds to determine Least Concern"),
-                        
-                        # Input: Threat reminder
-                         
-                        checkboxInput("threatvalue", label = "No observed, estimated, projected, inferred, or suspected declines likely 
-                                       to trigger criteria A, B, C, D or E." , value = TRUE),
-                        
+                        p("Adjust thresholds to determine Least Concern"),
                         
                         # Input: EOO threshold ----
                         sliderInput("eoo", "Extent of Occurrence (EOO):",
@@ -370,6 +372,11 @@ ui <- fluidPage(
                         
                         actionButton("resetBatchSliders", "Reset Values!"),
                         br(),
+                        
+                        # Input: Threat reminder
+                        
+                        checkboxInput("threatvalue", label = "No observed, estimated, projected, inferred, or suspected declines likely 
+                                       to trigger criteria A, B, C, D or E." , value = FALSE),
                         
                         helpText("Click to download SIS Connect and point files:"),
                         
@@ -760,17 +767,11 @@ server <- function(input, output, session) {
                  })
   })
   
-  # powo info download handler
-  output$getcleantab = downloadHandler(
-    # download the checked names table
-    filename = function(){
-      date <- format(Sys.Date(), "%Y%m%d")
-      paste("checked_names_", date, ".csv", sep = "" )
-    },
-    content = function(file){
-      write_csv(values$powo_results, file)
-    }
-  )
+  # observer to prevent calculations before species have been uploaded
+  observe({
+    species_uploaded <- ! is_empty(values$powo_results)
+    toggleState(id="getStats", condition=species_uploaded)
+  })
   
   # calculate statistics and get info for all species
   observeEvent(input$getStats, {
@@ -855,6 +856,12 @@ server <- function(input, output, session) {
                  })    
   })
   
+  # observer to prevent download before calculations done and threat statement checked
+  observe({
+    download_ready <- ! is_empty(values$statistics) & input$threatvalue
+    toggleState(id="downloadbatch", download_ready)
+  })
+  
   # batch species zip file download handler
   output$downloadbatch = downloadHandler(
     
@@ -917,13 +924,10 @@ server <- function(input, output, session) {
   # batch species reactive events ----
 
   output$threatvalue<- renderPrint({ 
-    if ((input$threatvalue) == TRUE) {
-      invisible(input$threatvalue)
-    } else {
-      cat(crayon::red("WARNING - please consider possible threats (past, present, future) that could cause declines and trigger criteria A, B, C, D, or E."))
+    if (! input$threatvalue & ! is_empty(values$statistics)) {
+      cat("WARNING - please consider possible threats (past, present, future) that could cause declines and trigger criteria A, B, C, D, or E.")
     }
-    
-    })
+  })
   eooValue <- reactive({
     input$eoo
   })
@@ -975,8 +979,10 @@ server <- function(input, output, session) {
                                     AOO >= aooValue() & 
                                     RecordCount >= recordsValue() & 
                                     TDWGCount >= tdwgValue())
+      
+      values$statistics <- arrange(values$statistics, desc(leastConcern))
     
-      datatable(arrange(values$statistics, desc(leastConcern)),
+      datatable(values$statistics,
                 options=list(pageLength=5)) %>%
         formatStyle("leastConcern",
                     target="row",
