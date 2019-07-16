@@ -102,20 +102,18 @@ ui <- fluidPage(
   
                                       fluidRow(
                                         column(8, align="center", offset = 2,
-                                               tags$h4("Enter a species"),
-                                                tags$h4("or click '?' for a random choice:")
+                                               tags$h4("Enter a species:")
+                                                #tags$h4("or click '?' for a random choice:")
                                                #actionButton("randomSpecies", "Random species!")
                                         )
                                       ),
                                       
                                       fluidRow(
-                                        column(10, 
-                                               style='font-size: 10px; margin-top:-1.4em',
-                                               textInput("speciesinput", label = "",
-                                                         placeholder = "Aloe zebrina")
+                                        column(8, textInput("speciesinput",
+                                                            label = NULL,
+                                                            placeholder = "Aloe zebrina")
                                                ),
-                                        column(2,
-                                               actionButton("randomSpecies", "?")
+                                        column(4,actionButton("randomSpecies", "Random Species")
                                         )
                                       ),
                                       
