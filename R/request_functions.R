@@ -9,6 +9,8 @@ get_accepted_name = function(name_in) {
     powo_results <- filter(powo_results, name == name_in)
 
     powo_results <- unite(powo_results, fullname, name, author, sep=" ", remove=FALSE)
+    # want to take an accepted name if it's there
+    powo_results <- arrange(powo_results, desc(accepted))
     
     powo_results <- powo_results[1,]
   }
@@ -68,17 +70,16 @@ get_native_range = function(ID){
       POWO_ID=NA_character_
   )
   
-  lookup_url <- paste("http://plantsoftheworld.online/api/2/taxon/urn:lsid:ipni.org:names:", ID, sep="")
+  lookup_url <- paste("http://plantsoftheworldonline.org/api/2/taxon/urn:lsid:ipni.org:names:", ID, sep="")
 
-  response <- httr::GET(lookup_url, query=c(fields="distribution"))
+  response <- httr::GET(lookup_url, query=list(fields="distribution"))
   
-  if (httr::http_error(response)) {
-    distribution <- NULL
-  } else {
-    results <- content(response, as="text")
-    results <- fromJSON(results)
+  distribution <- NULL
+  
+  if (! httr::http_error(response)) {
+    returned_data <- fromJSON(content(response, as="text"))
     
-    distribution <- results$distribution$natives
+    distribution <- returned_data$distribution$natives
   }
   
   if (! is.null(distribution)) {
@@ -86,7 +87,7 @@ get_native_range = function(ID){
     results = rename(results, LEVEL3_NAM=name, LEVEL3_COD=tdwgCode)
     results = mutate(results, LEVEL3_NAM=recode(LEVEL3_NAM, "á"="a"))
   }
-
+  
   return(results)
 }
 
@@ -236,7 +237,7 @@ get_gbif_points = function(key, gbif_limit) {
   if (results_count > 0){
     gbif_points <- gbif_results$data
   } else {
-    gbif_points <- tibble()
+    gbif_points <- results
   }
   
   if (nrow(gbif_points) > 0) {

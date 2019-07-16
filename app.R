@@ -386,7 +386,9 @@ ui <- fluidPage(
                           br(),
                           # Output: Data file ----
                           DT::dataTableOutput("stats"),
-                          verbatimTextOutput("threatvalue")
+                          verbatimTextOutput("threatvalue"),
+                          verbatimTextOutput("stats_warnings"),
+                          br()
                           
                         )
                       
@@ -772,34 +774,53 @@ server <- function(input, output, session) {
   
   # calculate statistics and get info for all species
   observeEvent(input$getStats, {
+    # TODO: clean up how this works with warnings and missing values
     withProgress(message="Getting GBIF reference keys...",
                  value=2, 
                  {
-                   values$gbif_keys <- 
+                   accepted_species <- 
                     values$powo_results %>%
-                    select(IPNI_ID, name_in) %>%
+                    filter(! is.na(IPNI_ID), accepted) %>%
+                    select(IPNI_ID, name_in, name_searched) %>%
                     mutate(gbif_results=map(name_in, get_gbif_key)) %>%
                     unnest()
+                   
+                   missing_species <-
+                     values$powo_results %>%
+                     filter(is.na(IPNI_ID) | ! accepted) %>%
+                     mutate(gbif_key=NA_character_,
+                            warning=case_when(is.na(IPNI_ID) ~ "No matching name found in POWO",
+                                              ! accepted ~ "Not an accepted species in POWO",
+                                              TRUE ~ NA_character_)) %>%
+                     select(IPNI_ID, name_in, name_searched, gbif_key, warning)
+                   
+                   values$gbif_keys <- bind_rows(accepted_species, missing_species)
+                   
                  })
-  
+    
     # this could grind things to a halt with too many species/points
+    
     withProgress(message="Getting points from GBIF...",
                  value=2, 
                  {
                    values$points <-
                     values$gbif_keys %>%
                     mutate(points=map(gbif_key, get_gbif_points, input$gbif_batch_limit)) %>%
-                    select(IPNI_ID, points) %>%
+                    select(IPNI_ID, points, name_searched) %>%
                     unnest()
                  })
-    # TODO: Add in something here to remove things not in GBIF or POWO. Really don't want to search for anything not accepted either
     
     withProgress(message="Getting native ranges from POWO...",
                  value=2, 
                  {
-                   values$native_range <- map_dfr(values$powo_results$IPNI_ID, get_native_range)
+                   # only want to search for native range for things we have an ID for
+                   filtered_powo <-
+                     values$powo_results %>%
+                     filter(! is.na(IPNI_ID), accepted)
+                   
+                   values$native_range <- map_dfr(filtered_powo$IPNI_ID, get_native_range)
                  })
-
+    
     nested_native_range <- 
       values$native_range %>% 
       group_by(POWO_ID) %>% 
@@ -818,20 +839,19 @@ server <- function(input, output, session) {
                     unnest(points)
                  })
     
-
     withProgress(message="Calculating least concern statistics...",
                  value=2,
                  {
                    values$statistics <-
-                    values$points %>%
-                    group_by(IPNI_ID) %>%
-                    nest() %>%
-                    left_join(values$gbif_keys, by="IPNI_ID") %>%
+                     values$points %>%
+                     group_by(name_searched, IPNI_ID) %>%
+                     nest() %>%
+                     left_join(values$gbif_keys, by=c("IPNI_ID", "name_searched")) %>%
                      left_join(nested_native_range, by=c("IPNI_ID"="POWO_ID")) %>%
                      mutate(statistics=pmap(list(name_in, IPNI_ID, data, native_tdwg, warning), 
-                                           calculate_statistics)) %>%
-                    select(statistics) %>%
-                    unnest()
+                                            calculate_statistics)) %>%
+                     select(name_searched, statistics) %>%
+                     unnest()
                  })    
   })
   
@@ -900,7 +920,7 @@ server <- function(input, output, session) {
     if ((input$threatvalue) == TRUE) {
       invisible(input$threatvalue)
     } else {
-      print("WARNING - please consider possible threats (past, present, future) that could cause declines and trigger criteria A, B, C, D, or E.")
+      cat(crayon::red("WARNING - please consider possible threats (past, present, future) that could cause declines and trigger criteria A, B, C, D, or E."))
     }
     
     })
@@ -947,16 +967,40 @@ server <- function(input, output, session) {
   
   # display stats for least concern species
   output$stats <- DT::renderDataTable({
-    if (! is.null(values$statistics)) {
-      filter(values$statistics,
-             EOO >= eooValue(),
-             AOO >= aooValue(),
-             RecordCount >= recordsValue(),
-             TDWGCount >= tdwgValue())
-      }
       
-    }, 
-    options = list(pageLength = 5))
+      req(values$statistics)
+      
+      values$statistics <- mutate(values$statistics,
+                                  leastConcern=EOO >= eooValue() & 
+                                    AOO >= aooValue() & 
+                                    RecordCount >= recordsValue() & 
+                                    TDWGCount >= tdwgValue())
+    
+      datatable(arrange(values$statistics, desc(leastConcern)),
+                options=list(pageLength=5)) %>%
+        formatStyle("leastConcern",
+                    target="row",
+                    color=styleEqual(c(1, NA), c("green", "red")))
+    })
+  
+  output$stats_warnings <- renderPrint({
+    req(values$statistics)
+    
+    if ("leastConcern" %in% colnames(values$statistics)) {
+      n_least_concern <- sum(values$statistics$leastConcern, na.rm=TRUE)
+      n_warnings <- sum(is.na(values$statistics$leastConcern))
+      n_total <- nrow(values$statistics)
+      
+      cat(
+        sprintf("%d species considered", n_total),
+        sprintf("%d with warnings", n_warnings),
+        sprintf("%d identified as least concern", n_least_concern),
+        "only information about species identified as least concern will be included in the SIS Connect files.",
+        sep="\n"
+      )  
+    }
+    
+  })
 
 }  
 
