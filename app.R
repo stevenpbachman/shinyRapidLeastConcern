@@ -974,7 +974,7 @@ server <- function(input, output, session) {
       cat(
         sprintf("%d species considered", n_total),
         sprintf("%d with warnings", n_warnings),
-        sprintf("%d identified as least concern", n_least_concern),
+        sprintf("%d identified as least concern by user-defined thresholds", n_least_concern),
         "only information about species identified as least concern will be included in the SIS Connect files.",
         sep="\n"
       )  
