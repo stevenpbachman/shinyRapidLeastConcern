@@ -41,24 +41,49 @@ ui <- fluidPage(
   navbarPage("Rapid Least Concern", id = "navLC",
               tabPanel("Home",
                 wellPanel(
-                  tags$h1("Welcome to Rapid Least Concern"),
+                  fluidRow(
+                    column(12, align="center",
+                           tags$h1("Welcome to Rapid Least Concern")
+                    )
+                  ),
+                  
+                  #tags$h1("Welcome to Rapid Least Concern"),
                   
                   br(),
                   br(),
                   
-                  tags$blockquote("Rapid Least Concern combines plant data from GBIF and Plants of
-                                  the World Online to generate a Red List compliant Least Concern assessment."),
+                  fluidRow(
+                    column(12, align="center",
+                           tags$blockquote("Rapid Least Concern combines plant data from GBIF and Plants of
+                                  the World Online to generate a Red List compliant Least Concern assessment.")
+                    )
+                  ),
+                  #tags$blockquote("Rapid Least Concern combines plant data from GBIF and Plants of
+                  #                the World Online to generate a Red List compliant Least Concern assessment."),
+                  
                   br(),
              
-                  actionButton("gotosingle", "Single assessment >>"),
-                  tags$h5("For generating Least Concern assessments one at a time."),
+                  #actionButton("gotosingle", "Single assessment >>"),
+                  #tags$h5("For generating Least Concern assessments one at a time."),
+                  
+                  fluidRow(
+                    column(12, align="center",
+                           actionButton("gotosingle", "Single assessment >>"),
+                           tags$h5("For generating Least Concern assessments one at a time.")
+                          )
+                  ),
                   
                   br(),
                   br(),
                   
-                  actionButton("gotobatch", "Batch assessment >>"),
-                  tags$h5("For generating multiple Least Concern assessments based on a user-defined species list."),
-                  
+                  #actionButton("gotobatch", "Batch assessment >>"),
+                  #tags$h5("For generating multiple Least Concern assessments based on a user-defined species list."),
+                  fluidRow(
+                    column(12, align="center",
+                           actionButton("gotobatch", "Batch assessment >>"),
+                           tags$h5("For generating multiple Least Concern assessments based on a user-defined species list.")
+                    )
+                  ),
                   br(),
                   br(),
 
@@ -72,18 +97,23 @@ ui <- fluidPage(
               tabPanel("1 Single",
                       sidebarLayout(position = "left",
                                     sidebarPanel(
-                                      actionButton("resetSingleForm", "Clear form!"),
-                                      actionButton("randomSpecies", "Random species!"),
+                                      #actionButton("resetSingleForm", "Clear form!"),
+                                      #actionButton("randomSpecies", "Random species!"),
   
                                       fluidRow(
                                         column(8, align="center", offset = 2,
-                                               tags$h4("Enter species")
+                                               tags$h4("Enter a species:")
                                         )
                                       ),
                                       
-                                      textInput("speciesinput",
-                                                "Enter species e.g. Aloe zebrina",
-                                                placeholder = "Aloe zebrina"),
+                                      fluidRow(
+                                        column(8, textInput("speciesinput",
+                                                            label = NULL,
+                                                            placeholder = "Aloe zebrina")
+                                               ),
+                                        column(4,actionButton("randomSpecies", "Random Species")
+                                        )
+                                      ),
                                       
                                       p("Selected GBIF ID:"),
                                       wellPanel(textOutput("key")),
@@ -92,7 +122,7 @@ ui <- fluidPage(
 
                                       tags$hr(style="border-color: black;"),
                                       fluidRow(
-                                        column(8, align="center", offset = 2,
+                                        column(12, align="center",
                                                tags$h4("Set parameters:")
                                          )
                                         ),
@@ -104,18 +134,10 @@ ui <- fluidPage(
                                                   value = 3000, 
                                                   step = 1000),
                                       
-                                      checkboxInput("native", "Remove non-native points", FALSE),
-                                      
                                       tags$hr(style="border-color: black;"),
 
                                       fluidRow(
-                                        column(8, align="center", offset = 2,
-                                               tags$h4("Run analysis:")
-                                        )
-                                      ),
-                                      
-                                      fluidRow(
-                                        column(8, align="center", offset = 2,
+                                        column(12, align="center", 
                                                actionButton("runSingle", "Run analysis!")
                                         )
                                       ),
@@ -126,28 +148,36 @@ ui <- fluidPage(
                                       Check the map and statistics. As a guideline, gauges in green indicate high probability of being Least Concern, red indicates possibly threatened. If you think you have an LC species, download the point file and SIS connect files"),
                                       
                                       tags$hr(style="border-color: black;"),
-
+                                      
                                       fluidRow(
-                                        column(8, align="center", offset = 2,
+                                        column(12, align="center", 
+                                               actionButton("resetSingleForm", "Clear form!")
+                                        )
+                                      ),
+                                      
+                                      
+                                      tags$hr(style="border-color: black;"),
+                                      
+                                      fluidRow(
+                                        column(12, align="center", 
                                                tags$h4("Download data:")
                                         )
                                       ),
                                       
                                       fluidRow(
-                                        column(8, align="center", offset = 2,
+                                        column(12, align="center", 
                                                downloadButton('download', "Download clean point file")
                                         )
                                       ),
-                                      
+
                                       br(),
-                                      
+   
                                       fluidRow(
-                                        column(8, align="center", offset = 2,
+                                        column(12, align="center",
                                                downloadButton('downloadSIS', "Download SIS Connect Files")
                                         )
                                       ),
-
-                                      
+ 
                                       br(),
                                       br(),
                                       br(),
@@ -208,7 +238,6 @@ ui <- fluidPage(
                                       br(),
                                       
                                       # search results from GBIF
-                                      h5("GBIF search results:"),
                                       conditionalPanel(
                                         condition = "input.minmaxgbif % 2 == 0",DT::dataTableOutput("summarytab")
                                       ),
@@ -222,7 +251,8 @@ ui <- fluidPage(
                                       
                                       actionButton("minmaxmap", "Hide/Show map ▼▲", style='padding:4px; font-size:80%'),
                                       
-                                      h5("Distribution map: "),
+                                      checkboxInput("native", "Hide non-native points", FALSE),
+                                      h5("* Note that only native points will be used in analysis"),
                                       
                                       conditionalPanel(
                                         condition = "input.minmaxmap % 2 == 0",leaflet::leafletOutput("mymap", width = "100%", height = 400)
@@ -231,7 +261,7 @@ ui <- fluidPage(
                                       br(),
                                       
                                       actionButton("minmaxstats", "Hide/Show statistics ▼▲", style='padding:4px; font-size:80%'),
-                                      h5("Statistics: "),
+                                      #h5("Statistics: "),
                                       conditionalPanel(
                                         condition = "input.minmaxstats % 2 == 0",DT::dataTableOutput("singletab"),
                                         
@@ -685,14 +715,17 @@ server <- function(input, output, session) {
   # Show csv files in mainpanel as data tables before download
   output$outallf <- DT::renderDataTable({
     values$species_info$allfields
+    datatable(values$species_info$allfields, colnames = c('ID', 'Trend', 'No threat', 'Threat unknown')) 
   })
   
   output$outassessments <- DT::renderDataTable({
     values$species_info$assessments
+    datatable(values$species_info$assessments, colnames = c('ID', 'Rationale', 'Map', 'Date', 'Version', 'Category', 'Trend', 'System', 'Language', 'Range', 'Pop', 'Habitat', 'Threats', 'Manual', 'Realm'))
   })
   
   output$outocc <- DT::renderDataTable({
     values$species_info$countries
+    datatable(values$species_info$countries, colnames = c('ID', 'Lookup', 'Country', 'Presence', 'Origin', 'Seasonality')) 
   })
   
   output$outcredits <- DT::renderDataTable({
@@ -702,11 +735,13 @@ server <- function(input, output, session) {
   output$outhab <- DT::renderDataTable({
     req(input$habinput)
     values$species_info$habitats
+    datatable(values$species_info$habitats, colnames = c('Name','Lookup','ID', 'Suitability', 'Important', 'Season')) 
   })
   
   output$outgfinput <- DT::renderDataTable({
     req(input$gfinput)
     values$species_info$plantspecific
+    datatable(values$species_info$plantspecific, colnames = c('Growth Form', 'Lookup', 'ID')) 
   })
   
   output$outtax <- DT::renderDataTable({
