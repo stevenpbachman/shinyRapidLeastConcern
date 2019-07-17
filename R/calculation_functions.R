@@ -47,9 +47,14 @@ calculate_statistics = function(name, ipni_key, points, native_distribution, war
     warning <- "No GBIF occurrences found for species"
   }
   
-  points <- filter(points, ! is.na(native_range))
-
-  if (nrow(points) == 0 & is.na(warning)) {
+  if (! is.null(points)) {
+    points <- filter(points, ! is.na(native_range))
+    n_points <- nrow(points)
+  } else {
+    n_points <- 0
+  }
+  
+  if (n_points == 0 & is.na(warning)) {
     warning <- "No GBIF occurrences in native range"
   }
 

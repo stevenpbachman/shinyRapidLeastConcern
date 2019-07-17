@@ -135,15 +135,15 @@ plantspecific = function(powo_id, growthform_lookup, growth_form=NA_character_) 
   return(gf)
 }
 
-taxonomy = function(powo_id, taxonomy_lookup, gbif_key, powo_author){
+taxonomy = function(powo_id, powo_author, taxonomy_lookup){
   
-  name_info = name_usage(gbif_key)
+  name_info <- lookup_powo(powo_id)
 
   tax = tibble(
     internal_taxon_id = powo_id,	
-    family = name_info$data$family,
-    genus = name_info$data$genus,
-    species = word(name_info$data$species,2),  
+    family = name_info$family,
+    genus = name_info$genus,
+    species = name_info$species,  
     taxonomicAuthority = powo_author)
 
   tax = inner_join(tax, taxonomy_lookup, by="family")
@@ -152,6 +152,40 @@ taxonomy = function(powo_id, taxonomy_lookup, gbif_key, powo_author){
   return(tax)
 }
 
-
+format_points = function(points, renaming_map=list()) {
+  # TODO: change gbif point function to use this formatting function
+  default_data <- list(
+    BasisOfRec = NA_character_,
+    BINOMIAL = NA_character_,
+    DEC_LAT = -999,
+    DEC_LONG = -999,
+    EVENT_YEAR = -999L,
+    CATALOG_NO = NA_character_,
+    SPATIALREF = "WGS84",
+    PRESENCE = "1",
+    ORIGIN = "1",
+    SEASONAL = "1",
+    DATA_SENS = "No",
+    SOURCE = NA_character_,
+    YEAR = NA_character_,
+    COMPILER = NA_character_,
+    CITATION = NA_character_,
+    recordedBy = NA_character_,
+    recordNumber = NA_character_,
+    issues = NA_character_,
+    datasetKey = NA_character_
+  )
+  
+  formatted_points <- rename(points, !!! renaming_map)
+   
+  columns_to_add <- setdiff(names(default_data), colnames(formatted_points))
+  formatted_points <- tibble::add_column(formatted_points, !!! default_data[columns_to_add])
+        
+  formatted_points$YEAR = format(Sys.Date(), "%Y")
+  
+  formatted_points <- select(formatted_points, colnames(formatted_points))
+  
+  return(formatted_points)
+}
 
 
