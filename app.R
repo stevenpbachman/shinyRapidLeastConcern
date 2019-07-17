@@ -278,17 +278,10 @@ ui <- fluidPage(
              tabPanel("2 Batch",
 
                       sidebarPanel(
-                        fluidRow(
-                          column(9, p("Upload a list of names from a CSV file. One field must be called 'name_in' and should contain binomials e.g. 'Poa annua'"))
-                        ),
-                        fluidRow(
-                          column(9, fileInput("file1", NULL,
-                                              multiple = FALSE,
-                                              accept = (".csv")
-                          )),
-                          column(3, actionButton("resetBatchForm", "Clear upload!"))
-                          
-                        ),
+                        p("Upload a list of names from a CSV file. One field must be called 'name_in' and should contain binomials e.g. 'Poa annua'"),
+                        fileInput("file1", NULL, multiple = FALSE, accept = (".csv")),
+                        actionButton("resetBatchForm", "Clear upload!", style="margin-bottom:20px;"),
+                        
                         br(),
 
                         
@@ -333,7 +326,7 @@ ui <- fluidPage(
                         br(),
                         
                         # Input: Threat reminder
-                        
+                        tags$b("Please tick the box below before downloading your results:"),
                         checkboxInput("threatvalue", label = "No observed, estimated, projected, inferred, or suspected declines likely 
                                        to trigger criteria A, B, C, D or E." , value = FALSE),
                         
@@ -359,8 +352,6 @@ ui <- fluidPage(
                         )
                       
              ),
-                        
-             tabPanel("3 Batch - user points"),
              
              tabPanel("Help")
     )
