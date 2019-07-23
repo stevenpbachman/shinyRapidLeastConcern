@@ -857,7 +857,6 @@ server <- function(input, output, session) {
     },
     content = function(file){
       batch_folder <- here("data/batchzip")
-      browser()
       
       # keep only the least concern results
       least_concern_results <- filter(values$statistics,
