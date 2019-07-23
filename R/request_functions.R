@@ -60,6 +60,20 @@ search_name_powo = function(name_in) {
   
 }
 
+lookup_powo <- function(ID, distribution=FALSE) {
+  lookup_url <- paste("http://plantsoftheworldonline.org/api/2/taxon/urn:lsid:ipni.org:names:", ID, sep="")
+  if (distribution) {
+    response <- httr::GET(lookup_url, query=list(fields="distribution"))
+  } else {
+    response <- httr::GET(lookup_url)
+  }
+
+  if (! httr::http_error(response)) {
+    return(fromJSON(content(response, as="text")))
+  }
+  return(NULL)  
+}
+
 get_native_range = function(ID){
   results = tibble(
       LEVEL3_COD=NA_character_,
@@ -69,19 +83,10 @@ get_native_range = function(ID){
       LEVEL3_NAM=NA_character_,
       POWO_ID=NA_character_
   )
-  
-  lookup_url <- paste("http://plantsoftheworldonline.org/api/2/taxon/urn:lsid:ipni.org:names:", ID, sep="")
 
-  response <- httr::GET(lookup_url, query=list(fields="distribution"))
-  
-  distribution <- NULL
-  
-  if (! httr::http_error(response)) {
-    returned_data <- fromJSON(content(response, as="text"))
+  returned_data <- lookup_powo(ID, distribution=TRUE)
+  distribution <- returned_data$distribution$natives
     
-    distribution <- returned_data$distribution$natives
-  }
-  
   if (! is.null(distribution)) {
     results = mutate(distribution, POWO_ID=ID)
     results = rename(results, LEVEL3_NAM=name, LEVEL3_COD=tdwgCode)

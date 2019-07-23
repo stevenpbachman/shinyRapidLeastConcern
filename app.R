@@ -308,17 +308,10 @@ ui <- fluidPage(
              tabPanel("2 Batch",
 
                       sidebarPanel(
-                        fluidRow(
-                          column(9, p("Upload a list of names from a CSV file. One field must be called 'name_in' and should contain binomials e.g. 'Poa annua'"))
-                        ),
-                        fluidRow(
-                          column(9, fileInput("file1", NULL,
-                                              multiple = FALSE,
-                                              accept = (".csv")
-                          )),
-                          column(3, actionButton("resetBatchForm", "Clear upload!"))
-                          
-                        ),
+                        p("Upload a list of names from a CSV file. One field must be called 'name_in' and should contain binomials e.g. 'Poa annua'"),
+                        fileInput("file1", NULL, multiple = FALSE, accept = (".csv")),
+                        actionButton("resetBatchForm", "Clear upload!", style="margin-bottom:20px;"),
+                        
                         br(),
 
                         
@@ -363,7 +356,7 @@ ui <- fluidPage(
                         br(),
                         
                         # Input: Threat reminder
-                        
+                        tags$b("Please tick the box below before downloading your results:"),
                         checkboxInput("threatvalue", label = "No observed, estimated, projected, inferred, or suspected declines likely 
                                        to trigger criteria A, B, C, D or E." , value = FALSE),
                         
@@ -389,8 +382,6 @@ ui <- fluidPage(
                         )
                       
              ),
-                        
-             tabPanel("3 Batch - user points"),
              
              tabPanel("Help")
     )
@@ -769,11 +760,26 @@ server <- function(input, output, session) {
   observeEvent(input$file1, {
     input_data <- read_csv(input$file1$datapath)
 
+    # clear any data that's already been loaded just in case
+    walk(names(values), function(x) {values[[x]] <- NULL})
+
+    input_names <- input_data$name_in
+    # this will probably need some column validation here
+    if ("longitude" %in% colnames(input_data) & "latitude" %in% colnames(input_data)) {
+      input_names <- unique(input_names)
+      values$points <- input_data
+    }
+
     withProgress(message="Checking names in POWO...",
                  value=2,
                  {
-                   values$powo_results=purrr::map_dfr(input_data$name_in, get_accepted_name)
+                   powo_results=purrr::map_dfr(input_names, get_accepted_name)
                  })
+    # add warnings column to the powo_results
+    powo_results$warnings <- case_when(is.na(powo_results$IPNI_ID) ~ "No matching name found in POWO",
+                                             ! powo_results$accepted ~ "Not an accepted species in POWO",
+                                             TRUE ~ NA_character_)
+    values$powo_results <- powo_results
   })
   
   # observer to prevent calculations before species have been uploaded
@@ -784,53 +790,55 @@ server <- function(input, output, session) {
   
   # calculate statistics and get info for all species
   observeEvent(input$getStats, {
-    # TODO: clean up how this works with warnings and missing values
-    withProgress(message="Getting GBIF reference keys...",
-                 value=2, 
-                 {
-                   accepted_species <- 
-                    values$powo_results %>%
-                    filter(! is.na(IPNI_ID), accepted) %>%
-                    select(IPNI_ID, name_in, name_searched) %>%
-                    mutate(gbif_results=map(name_in, get_gbif_key)) %>%
-                    unnest()
-                   
-                   missing_species <-
-                     values$powo_results %>%
-                     filter(is.na(IPNI_ID) | ! accepted) %>%
-                     mutate(gbif_key=NA_character_,
-                            warning=case_when(is.na(IPNI_ID) ~ "No matching name found in POWO",
-                                              ! accepted ~ "Not an accepted species in POWO",
-                                              TRUE ~ NA_character_)) %>%
-                     select(IPNI_ID, name_in, name_searched, gbif_key, warning)
-                   
-                   values$gbif_keys <- bind_rows(accepted_species, missing_species)
-                   
+    # only want to use things with valid names from POWO
+    valid_names <- filter(values$powo_results, is.na(warnings))
+    # skip if user provided
+    if (is_empty(values$points)) {
+      withProgress(message="Getting GBIF reference keys...",
+                   value=2, 
+                   {
+                     gbif_results <- map_dfr(valid_names$name_in, get_gbif_key)
+                     values$gbif_keys <- select(valid_names, IPNI_ID, name_in)
+                     values$gbif_keys <- bind_cols(values$gbif_keys, gbif_results)
+                     
+                     # join gbif keys to powo results to get warnings
+                     values$powo_results <- left_join(values$powo_results, 
+                                                      select(values$gbif_keys, IPNI_ID, warning), 
+                                                      by="IPNI_ID")
+                     
+                     values$powo_results <- mutate(values$powo_results,
+                                                   warnings=ifelse(! is.na(warning), warning, warnings))
+                     
+                     values$powo_results <- select(values$powo_results, -warning)
+                     
                  })
+    }
+
+    # skip if user provides points
+    if (is_empty(values$points)) {
+      withProgress(message="Getting points from GBIF...",
+                  value=2, 
+                  {
+                    values$points <- map(values$gbif_keys$gbif_key, get_gbif_points, input$gbif_batch_limit)
+                    values$points <- map2_dfr(values$points, values$gbif_keys$IPNI_ID, ~mutate(.x, IPNI_ID=.y))
+                  })
+    } else {
+      values$points <- format_points(values$points, renaming_map=list(DEC_LAT="latitude", DEC_LONG="longitude", BINOMIAL="name_in"))
+
+      # join to POWO names to just get valid names and to update the binomial field
+      values$points <- inner_join(values$points, select(valid_names, IPNI_ID, name_searched, fullname), by=c("BINOMIAL"="name_searched"))
+      values$points$BINOMIAL <- values$points$fullname
+      values$points <- select(values$points, -fullname)
+    }
     
-    # this could grind things to a halt with too many species/points
-    
-    withProgress(message="Getting points from GBIF...",
-                 value=2, 
-                 {
-                   values$points <-
-                    values$gbif_keys %>%
-                    mutate(points=map(gbif_key, get_gbif_points, input$gbif_batch_limit)) %>%
-                    select(IPNI_ID, points, name_searched) %>%
-                    unnest()
-                 })
-    
+    # add in a formatting step for user defined points, maybe on load
     withProgress(message="Getting native ranges from POWO...",
                  value=2, 
-                 {
-                   # only want to search for native range for things we have an ID for
-                   filtered_powo <-
-                     values$powo_results %>%
-                     filter(! is.na(IPNI_ID), accepted)
-                   
-                   values$native_range <- map_dfr(filtered_powo$IPNI_ID, get_native_range)
+                 {                 
+                   values$native_range <- map_dfr(valid_names$IPNI_ID, get_native_range)
                  })
     
+    # probably a cleaner way to do this
     nested_native_range <- 
       values$native_range %>% 
       group_by(POWO_ID) %>% 
@@ -849,16 +857,19 @@ server <- function(input, output, session) {
                     unnest(points)
                  })
     
+    nested_points <- 
+      values$points %>%
+      group_by(IPNI_ID) %>%
+      nest(.key="points")
+    
     withProgress(message="Calculating least concern statistics...",
                  value=2,
                  {
                    values$statistics <-
-                     values$points %>%
-                     group_by(name_searched, IPNI_ID) %>%
-                     nest() %>%
-                     left_join(values$gbif_keys, by=c("IPNI_ID", "name_searched")) %>%
-                     left_join(nested_native_range, by=c("IPNI_ID"="POWO_ID")) %>%
-                     mutate(statistics=pmap(list(name_in, IPNI_ID, data, native_tdwg, warning), 
+                     values$powo_results %>% 
+                     left_join(nested_points, by=c("IPNI_ID")) %>% 
+                     left_join(nested_native_range, by=c("IPNI_ID"="POWO_ID")) %>%  
+                     mutate(statistics=pmap(list(name_searched, IPNI_ID, points, native_tdwg, warnings),
                                             calculate_statistics)) %>%
                      select(name_searched, statistics) %>%
                      unnest()
@@ -882,11 +893,9 @@ server <- function(input, output, session) {
     content = function(file){
       batch_folder <- here("data/batchzip")
       
-      # filter out any result with a warning
-      least_concern_results <- filter(values$statistics, is.na(Warning))
-      
       # keep only the least concern results
-      least_concern_results <- filter(least_concern_results,
+      least_concern_results <- filter(values$statistics,
+                                      is.na(Warning),
                                       EOO >= eooValue(),
                                       AOO >= aooValue(),
                                       RecordCount >= recordsValue(),
@@ -897,7 +906,6 @@ server <- function(input, output, session) {
       
       # now the csv files
       least_concern_ranges <- filter(values$native_range, POWO_ID %in% least_concern_results$POWO_ID)
-      least_concern_keys <- filter(values$gbif_keys, IPNI_ID %in% least_concern_results$POWO_ID)
       least_concern_powo <- filter(values$powo_results, IPNI_ID %in% least_concern_results$POWO_ID)
       
       # get all the info tables for all species
@@ -908,7 +916,7 @@ server <- function(input, output, session) {
         credits=map_dfr(least_concern_results$POWO_ID, credits),
         habitats=map_dfr(least_concern_results$POWO_ID, habitats, HABITAT_LOOKUP),
         plantspecific=map_dfr(least_concern_results$POWO_ID, plantspecific, GROWTHFORM_LOOKUP),
-        taxonomy=pmap_dfr(list(least_concern_results$POWO_ID, least_concern_keys$gbif_key, least_concern_powo$author), taxonomy, taxonomy_lookup=IUCN_TAXONOMY),
+        taxonomy=map2_dfr(least_concern_results$POWO_ID, least_concern_powo$author, taxonomy, IUCN_TAXONOMY),
         results=values$statistics,
         points=least_concern_points
       )
