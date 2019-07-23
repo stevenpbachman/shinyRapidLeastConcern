@@ -21,7 +21,7 @@ get_species_info <- function(input_info) {
     credits=function(x) credits(x, name=input_info$name, email=input_info$email, affiliation=input_info$affiliation),
     habitats=function(x) habitats(x, HABITAT_LOOKUP, input_info$habinput),
     plantspecific=function(x) plantspecific(x, GROWTHFORM_LOOKUP, input_info$gfinput),
-    taxonomy=function(x) taxonomy(x, IUCN_TAXONOMY, input_info$key, input_info$author)
+    taxonomy=function(x) taxonomy(x, input_info$author, IUCN_TAXONOMY)
   )
 
   species_info <- purrr::map(info_functions, ~.x(input_info$powo))
