@@ -47,8 +47,6 @@ ui <- fluidPage(
                     )
                   ),
                   
-                  #tags$h1("Welcome to Rapid Least Concern"),
-                  
                   br(),
                   br(),
                   
@@ -58,17 +56,12 @@ ui <- fluidPage(
                                   the World Online to generate a Red List compliant Least Concern assessment.")
                     )
                   ),
-                  #tags$blockquote("Rapid Least Concern combines plant data from GBIF and Plants of
-                  #                the World Online to generate a Red List compliant Least Concern assessment."),
-                  
+
                   br(),
              
-                  #actionButton("gotosingle", "Single assessment >>"),
-                  #tags$h5("For generating Least Concern assessments one at a time."),
-                  
                   fluidRow(
                     column(12, align="center",
-                           actionButton("gotosingle", "Single assessment >>"),
+                           actionButton("gotosingle", "Single assessment"),
                            tags$h5("For generating Least Concern assessments one at a time.")
                           )
                   ),
@@ -76,11 +69,9 @@ ui <- fluidPage(
                   br(),
                   br(),
                   
-                  #actionButton("gotobatch", "Batch assessment >>"),
-                  #tags$h5("For generating multiple Least Concern assessments based on a user-defined species list."),
                   fluidRow(
                     column(12, align="center",
-                           actionButton("gotobatch", "Batch assessment >>"),
+                           actionButton("gotobatch", "Batch assessment"),
                            tags$h5("For generating multiple Least Concern assessments based on a user-defined species list.")
                     )
                   ),
@@ -97,9 +88,7 @@ ui <- fluidPage(
               tabPanel("1 Single",
                       sidebarLayout(position = "left",
                                     sidebarPanel(
-                                      #actionButton("resetSingleForm", "Clear form!"),
-                                      #actionButton("randomSpecies", "Random species!"),
-  
+    
                                       fluidRow(
                                         column(8, align="center", offset = 2,
                                                tags$h4("Enter a species:")
@@ -308,28 +297,67 @@ ui <- fluidPage(
              tabPanel("2 Batch",
 
                       sidebarPanel(
-                        p("Upload a list of names from a CSV file. One field must be called 'name_in' and should contain binomials e.g. 'Poa annua'"),
-                        fileInput("file1", NULL, multiple = FALSE, accept = (".csv")),
-                        actionButton("resetBatchForm", "Clear upload!", style="margin-bottom:20px;"),
                         
-                        br(),
+                        fluidRow(
+                          column(12, align="center",
+                                 tags$h4("Upload a CSV file:")
+                          )
+                        ),
+                        
+                        fluidRow(
+                          column(12, align="center",
+                                 fileInput("file1", NULL, multiple = FALSE, accept = (".csv"))
+                                 )
+                        ),
+                        
+                        p("Upload a list of names from a CSV file. One field must be called 'name_in' and should contain binomials e.g. 'Poa annua'.
+                          If you already have point data, just add 'latitude' and 'longitude' fields to your file and the analysis will use these instead of GBIF derived data"),
 
+                        tags$hr(style="border-color: black;"),
                         
+                        fluidRow(
+                          column(12, align="center",
+                                 actionButton("resetBatchForm", 
+                                              "Clear upload!", 
+                                              style="margin-bottom:20px;")
+                          )
+                          
+                        ),
+
                         # Input: EOO threshold ----
+                        tags$hr(style="border-color: black;"),
+                        
+                        fluidRow(
+                          column(12, align="center",
+                                 tags$h4("Set parameters:")
+                          )
+                        ),
+                        
                         sliderInput("gbif_batch_limit", "GBIF record maximum:",
                                     min = 1000, 
                                     max = 10000,
                                     value = 3000, 
                                     step = 1000),
                         
+                        tags$hr(style="border-color: black;"),
+                        
+                        fluidRow(
+                          column(12, align="center",
+                                 actionButton('getStats', "Run Analysis!")
+                          )
+                        ),
+                        
                         br(),
 
-                        p("Click 'Get statistics' for range metrics such as EOO and AOO"),
+                        tags$hr(style="border-color: black;"),
+
+                        fluidRow(
+                          column(12, align="center",
+                                 tags$h4("Adjust thresholds for Least Concern:")
+                          )
+                        ),
                         
-                        actionButton('getStats', "Get statistics"),
                         br(),
-                        br(),
-                        p("Adjust thresholds to determine Least Concern"),
                         
                         # Input: EOO threshold ----
                         sliderInput("eoo", "Extent of Occurrence (EOO):",
@@ -352,8 +380,14 @@ ui <- fluidPage(
                                     value = 5),
                         
                         
-                        actionButton("resetBatchSliders", "Reset Values!"),
-                        br(),
+                        fluidRow(
+                          column(12, align="center",
+                                 actionButton("resetBatchSliders", 
+                                              "Reset Values!")
+                          )
+                        ),
+                        
+                        tags$hr(style="border-color: black;"),
                         
                         # Input: Threat reminder
                         tags$b("Please tick the box below before downloading your results:"),
@@ -362,7 +396,12 @@ ui <- fluidPage(
                         
                         helpText("Click to download SIS Connect and point files:"),
                         
-                        downloadButton('downloadbatch', "Download SIS Connect Files")
+                        fluidRow(
+                          column(12, align="center",
+                                 actionButton("downloadbatch", 
+                                              "Download SIS Connect Files")
+                          )
+                        )
                         
                         ),
                         
