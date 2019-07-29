@@ -52,8 +52,9 @@ ui <- fluidPage(
                   
                   fluidRow(
                     column(12, align="center",
-                           tags$blockquote("Rapid Least Concern combines plant data from GBIF and Plants of
-                                  the World Online to generate a Red List compliant Least Concern assessment.")
+                           tags$blockquote("Generate a rapid Red List assessment for plant species that are at low risk of extinction 'Least Concern'.
+                           Search for a species, or generate a random species, and check against several indicators of Least Concern status. If the species 
+                           is thought to be Least Concern, the supporting data can be downloaded and then imported into the IUCN Red List 'SIS Connect' system.")
                     )
                   ),
 
@@ -72,7 +73,8 @@ ui <- fluidPage(
                   fluidRow(
                     column(12, align="center",
                            actionButton("gotobatch", "Batch assessment"),
-                           tags$h5("For generating multiple Least Concern assessments based on a user-defined species list.")
+                           tags$h5("Use this option if you have a list of species to assess. Or, if you have a list of species and
+                           you have already prepared occurrence records with latitude and longitude coordinates.")
                     )
                   ),
                   br(),
@@ -81,6 +83,7 @@ ui <- fluidPage(
                   br(),
                   br(),
                   br(),
+                  
                   HTML('<iframe width="400" height="200" src="https://www.youtube.com/embed/lJIrF4YjHfQ" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>')                 
                   )
                 ),
