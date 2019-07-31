@@ -425,9 +425,9 @@ ui <- fluidPage(
                           
                         )
                       
-             ),
+             )#,
              
-             tabPanel("Help", includeHTML(here("README.html")))
+             #tabPanel("Help", includeHTML(here("README.html")))
     )
 )
 
