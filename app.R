@@ -84,7 +84,9 @@ ui <- fluidPage(
                   br(),
                   br(),
                   
-                  HTML('<iframe width="400" height="200" src="https://www.youtube.com/embed/lJIrF4YjHfQ" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>')                 
+                  HTML('<iframe width="350" height="200" src="https://www.youtube.com/embed/EvL01ipkkuo" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'),                 
+                  HTML('<iframe width="350" height="200" src="https://www.youtube.com/embed/PCH9z9PmlAE" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'),                 
+                  HTML('<iframe width="350" height="200" src="https://www.youtube.com/embed/5mEAWVDFGCY" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>')
                   )
                 ),
              
