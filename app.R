@@ -401,8 +401,8 @@ ui <- fluidPage(
                         
                         fluidRow(
                           column(12, align="center",
-                                 actionButton("downloadbatch", 
-                                              "Download SIS Connect Files")
+                                 downloadButton("downloadbatch", 
+                                                "Download SIS Connect Files")
                           )
                         )
                         
@@ -425,8 +425,7 @@ ui <- fluidPage(
                       
              ),
              
-             tabPanel("Help",
-                      includeHTML(here("README.html")))
+             tabPanel("Help")
     )
 )
 
