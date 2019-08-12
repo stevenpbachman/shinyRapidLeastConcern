@@ -87,7 +87,8 @@ countries = function(native_range){
          countryoccurrence.countryoccurrencesubfield.countryoccurrencename,
          CountryOccurrence.CountryOccurrenceSubfield.presence,
          CountryOccurrence.CountryOccurrenceSubfield.origin,
-         CountryOccurrence.CountryOccurrenceSubfield.seasonaility)
+         CountryOccurrence.CountryOccurrenceSubfield.seasonality,
+         countryoccurrence.countryoccurrencesubfield.countryoccurrencelookup)
   
 
 }
