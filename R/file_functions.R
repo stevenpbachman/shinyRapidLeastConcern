@@ -36,7 +36,8 @@ allfields = function(powo_id){
     internal_taxon_id = powo_id,	
     CurrentTrendDataDerivation.value = "Suspected",
     nothreats.nothreats = "TRUE",
-    threatsunknown.value = "FALSE")
+    threatsunknown.value = "FALSE",
+    generationlength.range = "")
 }
 
 assessments = function(powo_id){
@@ -77,7 +78,7 @@ countries = function(native_range){
   
   country_table$CountryOccurrence.CountryOccurrenceSubfield.presence = "Extant"
   country_table$CountryOccurrence.CountryOccurrenceSubfield.origin = "Native"
-  country_table$CountryOccurrence.CountryOccurrenceSubfield.seasonaility = "Resident"
+  country_table$CountryOccurrence.CountryOccurrenceSubfield.seasonality = "Resident"
   
   country_table <- rename(country_table, 
                            internal_taxon_id=POWO_ID)
@@ -108,7 +109,7 @@ credits = function(powo_id, name="your_name your_name", email="your email", affi
   )
 }
 
-habitats = function(powo_id, habitat_lookup, habitat=NA_character_) {
+habitats = function(powo_id, habitat_lookup, habitat="Unknown") {
   
   species_habitats <- tibble(internal_taxon_id=powo_id, description=habitat)
 
