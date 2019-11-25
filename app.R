@@ -557,7 +557,8 @@ server <- function(input, output, session) {
       paste(species_name, "_", date, ".csv", sep = "" )
     },
     content = function(file){
-      df = select(values$points, -native_range)
+      df = filter(values$points, ! is.na(native_range))
+      df = select(df, -native_range)
       df$COMPILER = input$name
       df$CITATION = input$affiliation
       
@@ -947,6 +948,8 @@ server <- function(input, output, session) {
       
       # get the points
       least_concern_points <- filter(values$points, IPNI_ID %in% least_concern_results$POWO_ID)
+      least_concern_points <- filter(least_concern_points, !is.na(native_range))
+      least_concern_points = select(least_concern_points, -native_range)
       
       # now the csv files
       least_concern_ranges <- filter(values$native_range, POWO_ID %in% least_concern_results$POWO_ID)
