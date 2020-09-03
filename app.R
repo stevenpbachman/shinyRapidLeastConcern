@@ -846,14 +846,14 @@ server <- function(input, output, session) {
   observeEvent(input$getStats, {
     # only want to use things with valid names from POWO
     valid_names <- filter(values$powo_results, is.na(warnings))
-    print("valid_names working")
+    #print("valid_names working")
     # skip if user provided
     if (is_empty(values$points)) {
       withProgress(message="Getting GBIF reference keys...",
                    value=2, 
                    {
                      gbif_results <- map_dfr(valid_names$name_in, get_gbif_key)
-                     print("gbif_results working")
+                     #print("gbif_results working")
                      values$gbif_keys <- select(valid_names, IPNI_ID, name_in)
                      values$gbif_keys <- bind_cols(values$gbif_keys, gbif_results)
                      
@@ -880,7 +880,7 @@ server <- function(input, output, session) {
                   })
     } else {
       values$points <- format_points(values$points, renaming_map=list(DEC_LAT="latitude", DEC_LONG="longitude", BINOMIAL="name_in"))
-      print("values$points working")
+      #print("values$points working")
       # join to POWO names to just get valid names and to update the binomial field
       values$points <- inner_join(values$points, select(valid_names, IPNI_ID, name_searched, fullname), by=c("BINOMIAL"="name_searched"))
       values$points$BINOMIAL <- values$points$fullname
@@ -900,8 +900,7 @@ server <- function(input, output, session) {
       group_by(POWO_ID) %>% 
       nest(.key = "native_tdwg")
     
-    print("nested_native_range working")
-    
+    #print("nested_native_range working")
     withProgress(message="Checking which points are in native range...",
                  value=2,
                  {
@@ -974,8 +973,8 @@ server <- function(input, output, session) {
         assessments=map_df(least_concern_results$POWO_ID, assessments),
         countries=countries(least_concern_ranges),
         credits=map_dfr(least_concern_results$POWO_ID, credits),
-        #habitats=map_dfr(least_concern_results$POWO_ID, habitats, HABITAT_LOOKUP),
-        #plantspecific=map_dfr(least_concern_results$POWO_ID, plantspecific, GROWTHFORM_LOOKUP),
+        habitats=map_dfr(least_concern_results$POWO_ID, habitats, HABITAT_LOOKUP),
+        plantspecific=map_dfr(least_concern_results$POWO_ID, plantspecific, GROWTHFORM_LOOKUP),
         taxonomy=map2_dfr(least_concern_results$POWO_ID, least_concern_powo$author, taxonomy, IUCN_TAXONOMY),
         results=values$statistics,
         points=least_concern_points
