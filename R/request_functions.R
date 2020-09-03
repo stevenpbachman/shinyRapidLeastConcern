@@ -134,13 +134,12 @@ search_name_gbif = function (full_name) {
     family = NA_character_,
     acceptedSpecies = NA_character_
   )
-  
-  gbif_results = name_backbone(
+
+  gbif_results = name_backbone_verbose(
     name = full_name,
     rank = 'species',
     kingdom = 'Plantae',
-    strict = FALSE,
-    verbose = TRUE #change to TRUE to get more options
+    strict = FALSE
   )
   
   # bind together in case there are missing data
@@ -163,6 +162,7 @@ search_name_gbif = function (full_name) {
   
   options
 }
+
 
 get_gbif_key <- function(species_name) {
   bad_result_types <- c(

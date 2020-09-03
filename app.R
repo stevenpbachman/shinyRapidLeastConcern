@@ -23,7 +23,10 @@ library(rCAT)
 library(flexdashboard)
 library(shinydashboard)
 library(shinyjs)
-#library(V8)
+
+#temporary fix for nest
+nest <-nest_legacy
+unnest <- unnest_legacy
 
 #### 2 - Source the functions---------------
 source(here("R/resources.R"))
@@ -814,7 +817,7 @@ server <- function(input, output, session) {
       input_names <- unique(input_names)
       values$points <- input_data
     }
-
+    
     withProgress(message="Checking names in POWO...",
                  value=2,
                  {
@@ -825,6 +828,7 @@ server <- function(input, output, session) {
                                              ! powo_results$accepted ~ "Not an accepted species in POWO",
                                              TRUE ~ NA_character_)
     values$powo_results <- powo_results
+   
   })
   
   # observer to prevent calculations before species have been uploaded
@@ -843,7 +847,7 @@ server <- function(input, output, session) {
                    value=2, 
                    {
                      gbif_results <- map_dfr(valid_names$name_in, get_gbif_key)
-                     values$gbif_keys <- select(valid_names, IPNI_ID, name_in)
+                                        values$gbif_keys <- select(valid_names, IPNI_ID, name_in)
                      values$gbif_keys <- bind_cols(values$gbif_keys, gbif_results)
                      
                      # join gbif keys to powo results to get warnings
@@ -869,7 +873,6 @@ server <- function(input, output, session) {
                   })
     } else {
       values$points <- format_points(values$points, renaming_map=list(DEC_LAT="latitude", DEC_LONG="longitude", BINOMIAL="name_in"))
-
       # join to POWO names to just get valid names and to update the binomial field
       values$points <- inner_join(values$points, select(valid_names, IPNI_ID, name_searched, fullname), by=c("BINOMIAL"="name_searched"))
       values$points$BINOMIAL <- values$points$fullname
@@ -1078,5 +1081,5 @@ server <- function(input, output, session) {
 # Run the application 
 shinyApp(ui = ui, server = server)
 
-#rm(list=ls())
+
 
