@@ -10,8 +10,6 @@ library(magrittr)
 library(rgdal)
 library(DT)
 library(leaflet)
-library(remotes)
-remotes::install_github("ropensci/rgbif")
 library(rgbif)
 library(jsonlite)
 library(tidyverse)
@@ -29,8 +27,6 @@ library(shinyjs)
 #temporary fix for nest
 nest <-nest_legacy
 unnest <- unnest_legacy
-
-#library(V8)
 
 #### 2 - Source the functions---------------
 source(here("R/resources.R"))

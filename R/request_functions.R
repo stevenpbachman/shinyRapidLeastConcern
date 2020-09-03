@@ -140,7 +140,6 @@ search_name_gbif = function (full_name) {
     rank = 'species',
     kingdom = 'Plantae',
     strict = FALSE
-    #verbose = TRUE #change to TRUE to get more options
   )
   
   # bind together in case there are missing data
