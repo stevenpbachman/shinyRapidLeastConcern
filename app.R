@@ -821,7 +821,7 @@ server <- function(input, output, session) {
       input_names <- unique(input_names)
       values$points <- input_data
     }
-    print("input_names working")
+    #print("input_names working")
 
     withProgress(message="Checking names in POWO...",
                  value=2,
@@ -833,7 +833,7 @@ server <- function(input, output, session) {
                                              ! powo_results$accepted ~ "Not an accepted species in POWO",
                                              TRUE ~ NA_character_)
     values$powo_results <- powo_results
-    print("powo_results working")
+    #print("powo_results working")
   })
   
   # observer to prevent calculations before species have been uploaded
