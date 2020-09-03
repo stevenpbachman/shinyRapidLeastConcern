@@ -135,12 +135,16 @@ search_name_gbif = function (full_name) {
     acceptedSpecies = NA_character_
   )
   
-  gbif_results = name_backbone(
+  #################
+  #full_name = "Poa annua"
+  #################
+
+  gbif_results = name_backbone_verbose(
     name = full_name,
     rank = 'species',
     kingdom = 'Plantae',
-    strict = FALSE,
-    verbose = TRUE #change to TRUE to get more options
+    strict = FALSE
+    #verbose = TRUE #change to TRUE to get more options
   )
   
   # bind together in case there are missing data
@@ -163,6 +167,16 @@ search_name_gbif = function (full_name) {
   
   options
 }
+
+############
+#species_name = "Poa annua"
+#gbif_limit = "2000"
+#getkey = get_gbif_key(species_name)
+#key = getkey$gbif_key
+#gbif_limit = 10
+#points = get_gbif_points(thekey, 100)
+
+###############
 
 get_gbif_key <- function(species_name) {
   bad_result_types <- c(
