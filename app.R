@@ -817,8 +817,7 @@ server <- function(input, output, session) {
       input_names <- unique(input_names)
       values$points <- input_data
     }
-    #print("input_names working")
-
+    
     withProgress(message="Checking names in POWO...",
                  value=2,
                  {
@@ -829,7 +828,7 @@ server <- function(input, output, session) {
                                              ! powo_results$accepted ~ "Not an accepted species in POWO",
                                              TRUE ~ NA_character_)
     values$powo_results <- powo_results
-    #print("powo_results working")
+   
   })
   
   # observer to prevent calculations before species have been uploaded
@@ -842,15 +841,13 @@ server <- function(input, output, session) {
   observeEvent(input$getStats, {
     # only want to use things with valid names from POWO
     valid_names <- filter(values$powo_results, is.na(warnings))
-    #print("valid_names working")
     # skip if user provided
     if (is_empty(values$points)) {
       withProgress(message="Getting GBIF reference keys...",
                    value=2, 
                    {
                      gbif_results <- map_dfr(valid_names$name_in, get_gbif_key)
-                     #print("gbif_results working")
-                     values$gbif_keys <- select(valid_names, IPNI_ID, name_in)
+                                        values$gbif_keys <- select(valid_names, IPNI_ID, name_in)
                      values$gbif_keys <- bind_cols(values$gbif_keys, gbif_results)
                      
                      # join gbif keys to powo results to get warnings
@@ -876,7 +873,6 @@ server <- function(input, output, session) {
                   })
     } else {
       values$points <- format_points(values$points, renaming_map=list(DEC_LAT="latitude", DEC_LONG="longitude", BINOMIAL="name_in"))
-      #print("values$points working")
       # join to POWO names to just get valid names and to update the binomial field
       values$points <- inner_join(values$points, select(valid_names, IPNI_ID, name_searched, fullname), by=c("BINOMIAL"="name_searched"))
       values$points$BINOMIAL <- values$points$fullname
@@ -896,7 +892,6 @@ server <- function(input, output, session) {
       group_by(POWO_ID) %>% 
       nest(.key = "native_tdwg")
     
-    #print("nested_native_range working")
     withProgress(message="Checking which points are in native range...",
                  value=2,
                  {
@@ -1086,5 +1081,5 @@ server <- function(input, output, session) {
 # Run the application 
 shinyApp(ui = ui, server = server)
 
-#rm(list=ls())
+
 
